@@ -39,10 +39,26 @@ void BOARD_InitBootPins(void);
 #define BOARD_INITPINS_LED_RED_GPIO_PIN 12U              /*!<@brief GPIO pin number */
 #define BOARD_INITPINS_LED_RED_GPIO_PIN_MASK (1U << 12U) /*!<@brief GPIO pin mask */
 
+#define BOARD_INITPINS_LED_GREEN_GPIO GPIO3                /*!<@brief GPIO peripheral base pointer */
+#define BOARD_INITPINS_LED_GREEN_GPIO_PIN 13U              /*!<@brief GPIO pin number */
+#define BOARD_INITPINS_LED_GREEN_GPIO_PIN_MASK (1U << 13U) /*!<@brief GPIO pin mask */
+
+#define BOARD_INITPINS_LED_BLUE_GPIO GPIO3                /*!<@brief GPIO peripheral base pointer */
+#define BOARD_INITPINS_LED_BLUE_GPIO_PIN 0U              /*!<@brief GPIO pin number */
+#define BOARD_INITPINS_LED_BLUE_GPIO_PIN_MASK (1U << 0U) /*!<@brief GPIO pin mask */
+
 /* Symbols to be used with PORT driver */
 #define BOARD_INITPINS_LED_RED_PORT PORT3                /*!<@brief PORT peripheral base pointer */
 #define BOARD_INITPINS_LED_RED_PIN 12U                   /*!<@brief PORT pin number */
 #define BOARD_INITPINS_LED_RED_PIN_MASK (1U << 12U)      /*!<@brief PORT pin mask */
+
+#define BOARD_INITPINS_LED_GREEN_PORT PORT3                /*!<@brief PORT peripheral base pointer */
+#define BOARD_INITPINS_LED_GREEN_PIN 13U                   /*!<@brief PORT pin number */
+#define BOARD_INITPINS_LED_GREEN_PIN_MASK (1U << 13U)      /*!<@brief PORT pin mask */
+
+#define BOARD_INITPINS_LED_BLUE_PORT PORT3                /*!<@brief PORT peripheral base pointer */
+#define BOARD_INITPINS_LED_BLUE_PIN 0U                   /*!<@brief PORT pin number */
+#define BOARD_INITPINS_LED_BLUE_PIN_MASK (1U << 0U)      /*!<@brief PORT pin mask */
                                                          /* @} */
 
 /*!

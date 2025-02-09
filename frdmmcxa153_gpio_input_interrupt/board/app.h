@@ -20,6 +20,7 @@
 #define BOARD_SW_NAME        BOARD_SW2_NAME
 #define BOARD_SW_IRQ         BOARD_SW2_IRQ
 #define BOARD_SW_IRQ_HANDLER BOARD_SW2_IRQ_HANDLER
+//#define BOARD_SW2_IRQ_HANDLER BOARD_SW3_IRQ_HANDLER
 /*${macro:end}*/
 
 /*******************************************************************************
