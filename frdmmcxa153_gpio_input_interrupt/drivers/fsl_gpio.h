@@ -345,7 +345,7 @@ static inline void GPIO_PortInputDisable(GPIO_Type *base, uint32_t mask)
 static inline void GPIO_PinWrite(GPIO_Type *base, uint32_t pin, uint8_t output)
 {
 #if !(defined(FSL_FEATURE_GPIO_HAS_NO_INDEP_OUTPUT_CONTROL) && FSL_FEATURE_GPIO_HAS_NO_INDEP_OUTPUT_CONTROL)
-    if (output == 0U)
+    if (output == 1U)
     {
         base->PCOR = GPIO_FIT_REG(1UL << pin);
     }
