@@ -10,22 +10,9 @@
 
 #include "StateMachine.h"
 
-typedef void (*StateDef)(void);
-
-typedef enum {
-    State0 = 0,
-	State1,
-	State2,
-	State3,
-	State4,
-	State5,
-	State6,
-	State7,
-    TotalStates
-}enStates;
-
-#define FunctPtr \
-{	/*PtrToFunct  ,   StateCond1,    StateCond2	*/	\
+/*Configuration table to set functions to be called in every state, and the next state in each condition.*/
+#define StatesDefinition \
+{	/*PtrToFunct  ,   				StateCond1,    StateCond2	*/	\
 	{(StateDef)&StateMachine0,   	State1, 		State7},\
 	{(StateDef)&StateMachine1,   	State2, 		State0},\
 	{(StateDef)&StateMachine2,   	State3, 		State1},\

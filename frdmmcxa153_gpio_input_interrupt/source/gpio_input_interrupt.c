@@ -37,7 +37,7 @@ typedef struct {
 /*******************************************************************************
  * Variables
  ******************************************************************************/
-stStatesCfg g_StatesPtrs[TotalStates] = FunctPtr;
+stStatesCfg g_StatesPtrs[TotalStates] = StatesDefinition;
 uint8_t g_CurrentState = (uint8_t)State0;
 uint8_t g_PrevState = (uint8_t)State7;
 
@@ -50,6 +50,7 @@ volatile bool g_Button2Press = false;
  * Code
  ******************************************************************************/
 
+/*This function evaluates values of the interrupt flags to determine which condition was accomplished.*/
 static uint8_t u8DetermineCond(void)
 {
 	uint8_t u8CondDetected = (uint8_t)CondIndetermined;
@@ -69,6 +70,7 @@ static uint8_t u8DetermineCond(void)
 	return u8CondDetected;
 }
 
+/*This function evaluates values set on StatesDefinition*/
 static void vCheckConfig(void)
 {
 	uint8_t u8Index = (uint8_t)0U;
@@ -84,7 +86,7 @@ static void vCheckConfig(void)
 /*!
  * @brief Interrupt service fuction of switch.
  *
- * This function toggles the LED
+ * This functions change interrupt flags state
  */
 void BOARD_SW_IRQ_HANDLER(void)
 {
@@ -107,7 +109,7 @@ void BOARD_SW3_IRQ_HANDLER(void)
 void StateMachine0(void)
 {
 	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Toggle LED. */
+	/* Set LEDs R=0, G=0, B=0. */
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 0U);
 	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 0U);
 	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 0U);
@@ -116,7 +118,7 @@ void StateMachine0(void)
 void StateMachine1(void)
 {
 	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Toggle LED. */
+	/* Set LEDs R=0, G=0, B=1. */
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 0U);
 	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 0U);
 	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 1U);
@@ -125,7 +127,7 @@ void StateMachine1(void)
 void StateMachine2(void)
 {
 	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Toggle LED. */
+	/* Set LEDs R=0, G=1, B=0. */
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 0U);
 	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 1U);
 	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 0U);
@@ -134,7 +136,7 @@ void StateMachine2(void)
 void StateMachine3(void)
 {
 	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Toggle LED. */
+	/* Set LEDs R=0, G=1, B=1. */
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 0U);
 	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 1U);
 	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 1U);
@@ -143,7 +145,7 @@ void StateMachine3(void)
 void StateMachine4(void)
 {
 	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Toggle LED. */
+	/* Set LEDs R=1, G=0, B=0. */
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 1U);
 	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 0U);
 	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 0U);
@@ -152,7 +154,7 @@ void StateMachine4(void)
 void StateMachine5(void)
 {
 	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Toggle LED. */
+	/* Set LEDs R=1, G=0, B=1. */
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 1U);
 	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 0U);
 	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 1U);
@@ -161,7 +163,7 @@ void StateMachine5(void)
 void StateMachine6(void)
 {
 	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Toggle LED. */
+	/* Set LEDs R=1, G=1, B=0. */
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 1U);
 	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 1U);
 	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 0U);
@@ -170,7 +172,7 @@ void StateMachine6(void)
 void StateMachine7(void)
 {
 	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Toggle LED. */
+	/* Set LEDs R=1, G=1, B=1. */
 	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 1U);
 	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 1U);
 	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 1U);
@@ -197,8 +199,7 @@ void vInit(void)
     PRINTF("\r\n GPIO Driver example\r\n");
     PRINTF("\r\n Press %s to turn on/off a LED \r\n", BOARD_SW_NAME);
 
-/* Init input switch GPIO. */
-
+    /* Init input switch GPIO. */
     GPIO_SetPinInterruptConfig(BOARD_SW_GPIO, BOARD_SW_GPIO_PIN, kGPIO_InterruptFallingEdge);
     GPIO_SetPinInterruptConfig(BOARD_SW3_GPIO, BOARD_SW3_GPIO_PIN, kGPIO_InterruptFallingEdge);
 
@@ -219,26 +220,32 @@ void vInit(void)
  */
 int main(void)
 {
-	uint8_t u8Signal = (uint8_t)CondIndetermined;
+	uint8_t u8Cond = (uint8_t)CondIndetermined;
+
+	/*Check elements set in StatesDefinition*/
 	vCheckConfig();
+
+	/*Init drivers*/
 	vInit();
 
     while (1)
     {
-    	u8Signal = u8DetermineCond();
+    	/*Evaluate switches state*/
+    	u8Cond = u8DetermineCond();
 
-    	if(u8Signal == (uint8_t)Cond1)
+    	/*Determine next state to be executed and clean Button interrupt flags*/
+    	if(u8Cond == (uint8_t)Cond1)
     	{
     		g_CurrentState = g_StatesPtrs[g_PrevState].u8StateCond1;
     		g_ButtonPress = false;
     	}
-    	else if(u8Signal == (uint8_t)Cond2)
+    	else if(u8Cond == (uint8_t)Cond2)
     	{
     		g_CurrentState = g_StatesPtrs[g_PrevState].u8StateCond2;
     		g_Button2Press = false;
     	}
 
-
+    	/*Call only once the function of the current state*/
     	if (g_CurrentState != g_PrevState)
     	{
     		g_StatesPtrs[g_CurrentState].PtrFunc();
