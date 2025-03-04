@@ -15,21 +15,20 @@
 #include "app.h"
 #include "pin_mux.h"
 #include "board.h"
-#include "StateMachine_cfg.h"
+#include "SchedFIFO_cfg.h"
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
-typedef enum {
-    Cond1 = 0,
-    Cond2,
-    CondIndetermined
-}enConditions;
+#define TOTAL_TASKS (TotalTasks - 1)
+#define FIRST_INPUT (0)
+#define LAST_INPUT	(TOTAL_TASKS - 1)
 
 typedef struct {
-	StateDef PtrFunc;
-	uint8_t u8StateCond1;
-	uint8_t	u8StateCond2;
-}stStatesCfg;
+	uint8_t u8TaskID;
+	PtrTask PtrFunc;
+	uint8_t u8BurstTime;
+	uint8_t u8TaskState;
+}stTasksFt;
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -37,37 +36,112 @@ typedef struct {
 /*******************************************************************************
  * Variables
  ******************************************************************************/
-stStatesCfg g_StatesPtrs[TotalStates] = StatesDefinition;
-uint8_t g_CurrentState = (uint8_t)State0;
-uint8_t g_PrevState = (uint8_t)State7;
-
-/* Whether the SW button is pressed */
-volatile bool g_ButtonPress = false;
-volatile bool g_Button2Press = false;
-
+stTasksFt Task_Config[TOTAL_TASKS] = TaskScheduler;
+stTasksFt Task_RdyBuff[TOTAL_TASKS] = {0};
+uint8_t u8TaskInBuff = 0U;
 
 /*******************************************************************************
  * Code
  ******************************************************************************/
-
-/*This function evaluates values of the interrupt flags to determine which condition was accomplished.*/
-static uint8_t u8DetermineCond(void)
+static void vChangeStatus(uint8_t u8TaskId)
 {
-	uint8_t u8CondDetected = (uint8_t)CondIndetermined;
-	if((g_ButtonPress)&&!(g_Button2Press))
+	for(uint8_t u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS; u8Index++)
 	{
-		u8CondDetected = (uint8_t)Cond1;
+		if(Task_Config[u8Index].u8TaskID == u8TaskId)
+		{
+			Task_Config[u8Index].u8TaskState = (uint8_t)Task_Ready;
+			break;
+		}
 	}
-	else if(!(g_ButtonPress)&&(g_Button2Press))
+}
+
+static void vAddTasks2Buff(void)
+{
+	uint8_t u8InBuffFlag = 0U;
+
+	for(uint8_t u8Index = 0U; (u8Index < (uint8_t)TOTAL_TASKS)&&(u8TaskInBuff < TOTAL_TASKS); u8Index++)
 	{
-		u8CondDetected = (uint8_t)Cond2;
+		u8InBuffFlag = 0U;
+
+		if(Task_Config[u8Index].u8TaskState == (uint8_t)Task_Ready)
+		{
+			for(uint8_t u8IndexBuff = 0U; u8IndexBuff < (uint8_t)TOTAL_TASKS; u8IndexBuff++)
+			{
+				if(Task_Config[u8Index].u8TaskID == Task_RdyBuff[u8IndexBuff].u8TaskID)
+				{
+					u8InBuffFlag = 1U;
+					break;
+				}
+			}
+
+			if(u8InBuffFlag == 0U)
+			{
+				Task_RdyBuff[u8TaskInBuff].PtrFunc = Task_Config[u8Index].PtrFunc;
+				Task_RdyBuff[u8TaskInBuff].u8BurstTime = Task_Config[u8Index].u8BurstTime;
+				Task_RdyBuff[u8TaskInBuff].u8TaskID = Task_Config[u8Index].u8TaskID;
+				Task_RdyBuff[u8TaskInBuff].u8TaskState = Task_Config[u8Index].u8TaskState;
+
+				u8TaskInBuff++;
+			}
+		}
 	}
-	else
+}
+
+static void vExecuteTasks(void)
+{
+	uint8_t u8TaskId_Index = TOTAL_TASKS;
+	uint8_t u8TaskId = Task_RdyBuff[FIRST_INPUT].u8TaskID;
+	uint8_t u8TaskBurst = Task_RdyBuff[FIRST_INPUT].u8BurstTime;
+
+	for(uint8_t u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS; u8Index++)
 	{
-		/*Nothing to do*/
+		if(Task_Config[u8Index].u8TaskID == u8TaskId)
+		{
+			u8TaskId_Index = u8Index;
+			break;
+		}
 	}
 
-	return u8CondDetected;
+	if(u8TaskId_Index < (uint8_t)TOTAL_TASKS)
+	{
+		Task_Config[u8TaskId_Index].u8TaskState = (uint8_t)Task_Running;
+		Task_RdyBuff[FIRST_INPUT].PtrFunc(u8TaskBurst, u8TaskId);
+		Task_Config[u8TaskId_Index].u8TaskState = (uint8_t)Task_Suspended;
+	}
+}
+
+static void vDequeue(void)
+{
+	uint8_t u8TaskId_Index = TOTAL_TASKS;
+	uint8_t u8TaskId = Task_RdyBuff[FIRST_INPUT].u8TaskID;
+	uint8_t u8TaskBurst = Task_RdyBuff[FIRST_INPUT].u8BurstTime;
+
+	for(uint8_t u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS; u8Index++)
+	{
+		if(Task_Config[u8Index].u8TaskID == u8TaskId)
+		{
+			u8TaskId_Index = u8Index;
+			break;
+		}
+	}
+
+	if(Task_Config[u8TaskId_Index].u8TaskState == (uint8_t)Task_Suspended)
+	{
+		for(uint8_t u8TaskIndex = 0U; u8TaskIndex < (uint8_t)(TOTAL_TASKS - 1); u8TaskIndex++)
+		{
+			Task_RdyBuff[u8TaskIndex].PtrFunc = Task_RdyBuff[u8TaskIndex + 1].PtrFunc;
+			Task_RdyBuff[u8TaskIndex].u8BurstTime = Task_RdyBuff[u8TaskIndex + 1].u8BurstTime;
+			Task_RdyBuff[u8TaskIndex].u8TaskID = Task_RdyBuff[u8TaskIndex + 1].u8TaskID;
+			Task_RdyBuff[u8TaskIndex].u8TaskState = Task_RdyBuff[u8TaskIndex + 1].u8TaskState;
+		}
+
+		Task_RdyBuff[LAST_INPUT].PtrFunc = (PtrTask)NULL;
+		Task_RdyBuff[LAST_INPUT].u8BurstTime = 0U;
+		Task_RdyBuff[LAST_INPUT].u8TaskID = 0U;
+		Task_RdyBuff[LAST_INPUT].u8TaskState = 0U;
+
+		u8TaskInBuff--;
+	}
 }
 
 /*This function evaluates values set on StatesDefinition*/
@@ -75,143 +149,29 @@ static void vCheckConfig(void)
 {
 	uint8_t u8Index = (uint8_t)0U;
 
-	for(u8Index = 0U; u8Index < (uint8_t)TotalStates; u8Index++)
+	for(u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS; u8Index++)
 	{
-		assert(g_StatesPtrs[u8Index].PtrFunc != (StateDef)NULL);
-		assert(g_StatesPtrs[u8Index].u8StateCond1 < (uint8_t)TotalStates);
-		assert(g_StatesPtrs[u8Index].u8StateCond2 < (uint8_t)TotalStates);
+		assert(Task_Config[u8Index].PtrFunc != (PtrTask)NULL);
+		assert(Task_Config[u8Index].u8BurstTime < (uint8_t)Total_Burst);
+		assert(Task_Config[u8Index].u8TaskID < (uint8_t)TotalTasks);
+		assert(Task_Config[u8Index].u8TaskState < (uint8_t)Total_States);
 	}
 }
 
-/*!
- * @brief Interrupt service fuction of switch.
- *
- * This functions change interrupt flags state
- */
-void BOARD_SW_IRQ_HANDLER(void)
+void Task_execute(uint8_t u8BurstTime, uint8_t u8TaskId)
 {
-    GPIO_GpioClearInterruptFlags(BOARD_SW_GPIO, 1U << BOARD_SW_GPIO_PIN);
-    /* Change state of button. */
-    g_ButtonPress = true;
-    SDK_ISR_EXIT_BARRIER;
+	PRINTF("Task %d running\r\n", u8TaskId);
+	PRINTF("Waiting %d ms\r\n", u8BurstTime);
+
+	SDK_DelayAtLeastUs((u8BurstTime * 1000), SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
 }
-
-void BOARD_SW3_IRQ_HANDLER(void)
-{
-    /* Clear external interrupt flag. */
-    GPIO_GpioClearInterruptFlags(BOARD_SW3_GPIO, 1U << BOARD_SW3_GPIO_PIN);
-
-    /* Change state of button. */
-    g_Button2Press = true;
-    SDK_ISR_EXIT_BARRIER;
-}
-
-void StateMachine0(void)
-{
-	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Set LEDs R=0, G=0, B=0. */
-	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 0U);
-	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 0U);
-	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 0U);
-}
-
-void StateMachine1(void)
-{
-	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Set LEDs R=0, G=0, B=1. */
-	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 0U);
-	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 0U);
-	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 1U);
-}
-
-void StateMachine2(void)
-{
-	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Set LEDs R=0, G=1, B=0. */
-	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 0U);
-	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 1U);
-	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 0U);
-}
-
-void StateMachine3(void)
-{
-	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Set LEDs R=0, G=1, B=1. */
-	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 0U);
-	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 1U);
-	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 1U);
-}
-
-void StateMachine4(void)
-{
-	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Set LEDs R=1, G=0, B=0. */
-	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 1U);
-	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 0U);
-	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 0U);
-}
-
-void StateMachine5(void)
-{
-	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Set LEDs R=1, G=0, B=1. */
-	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 1U);
-	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 0U);
-	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 1U);
-}
-
-void StateMachine6(void)
-{
-	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Set LEDs R=1, G=1, B=0. */
-	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 1U);
-	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 1U);
-	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 0U);
-}
-
-void StateMachine7(void)
-{
-	PRINTF(" %d state \r\n", g_CurrentState);
-	/* Set LEDs R=1, G=1, B=1. */
-	GPIO_PinWrite(BOARD_LED_RED_GPIO, BOARD_LED_RED_GPIO_PIN, 1U);
-	GPIO_PinWrite(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, 1U);
-	GPIO_PinWrite(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, 1U);
-}
-
 
 void vInit(void)
 {
-    /* Define the init structure for the input switch pin */
-    gpio_pin_config_t sw_config = {
-        kGPIO_DigitalInput,
-        0,
-    };
-
-    /* Define the init structure for the output LED pin */
-    gpio_pin_config_t led_config = {
-        kGPIO_DigitalOutput,
-        0,
-    };
-
     BOARD_InitHardware();
 
     /* Print a note to terminal. */
-    PRINTF("\r\n GPIO Driver example\r\n");
-    PRINTF("\r\n Press %s to turn on/off a LED \r\n", BOARD_SW_NAME);
-
-    /* Init input switch GPIO. */
-    GPIO_SetPinInterruptConfig(BOARD_SW_GPIO, BOARD_SW_GPIO_PIN, kGPIO_InterruptFallingEdge);
-    GPIO_SetPinInterruptConfig(BOARD_SW3_GPIO, BOARD_SW3_GPIO_PIN, kGPIO_InterruptFallingEdge);
-
-    EnableIRQ(BOARD_SW_IRQ);
-    EnableIRQ(BOARD_SW3_IRQ);
-    GPIO_PinInit(BOARD_SW_GPIO, BOARD_SW_GPIO_PIN, &sw_config);
-    GPIO_PinInit(BOARD_SW3_GPIO, BOARD_SW3_GPIO_PIN, &sw_config);
-
-    /* Init output LED GPIO. */
-    GPIO_PinInit(BOARD_LED_GPIO, BOARD_LED_GPIO_PIN, &led_config);
-    GPIO_PinInit(BOARD_LED_GREEN_GPIO, BOARD_LED_GREEN_GPIO_PIN, &led_config);
-    GPIO_PinInit(BOARD_LED_BLUE_GPIO, BOARD_LED_BLUE_GPIO_PIN, &led_config);
+    PRINTF("\r\n Scheduler FIFO\r\n");
 }
 
 
@@ -220,8 +180,6 @@ void vInit(void)
  */
 int main(void)
 {
-	uint8_t u8Cond = (uint8_t)CondIndetermined;
-
 	/*Check elements set in StatesDefinition*/
 	vCheckConfig();
 
@@ -230,26 +188,21 @@ int main(void)
 
     while (1)
     {
-    	/*Evaluate switches state*/
-    	u8Cond = u8DetermineCond();
-
-    	/*Determine next state to be executed and clean Button interrupt flags*/
-    	if(u8Cond == (uint8_t)Cond1)
+    	for(uint8_t u8TaskIndex = 0U; u8TaskIndex < (uint8_t)TOTAL_TASKS; u8TaskIndex++)
     	{
-    		g_CurrentState = g_StatesPtrs[g_PrevState].u8StateCond1;
-    		g_ButtonPress = false;
-    	}
-    	else if(u8Cond == (uint8_t)Cond2)
-    	{
-    		g_CurrentState = g_StatesPtrs[g_PrevState].u8StateCond2;
-    		g_Button2Press = false;
+    		if(Task_Config[u8TaskIndex].u8TaskState == (uint8_t)Task_Suspended)
+    		{
+    			vChangeStatus(Task_Config[u8TaskIndex].u8TaskID);
+    		}
     	}
 
-    	/*Call only once the function of the current state*/
-    	if (g_CurrentState != g_PrevState)
+    	vAddTasks2Buff();
+
+    	if((Task_RdyBuff[FIRST_INPUT].u8TaskState == (uint8_t)Task_Ready)&&(Task_RdyBuff[FIRST_INPUT].PtrFunc != (PtrTask)NULL))
     	{
-    		g_StatesPtrs[g_CurrentState].PtrFunc();
-    		g_PrevState = g_CurrentState;
+    		vExecuteTasks();
+
+    		vDequeue();
     	}
     }
 }
