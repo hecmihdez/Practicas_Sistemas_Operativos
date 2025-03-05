@@ -8,7 +8,7 @@
 #ifndef SCHEDFIFO_H_
 #define SCHEDFIFO_H_
 
-typedef void (*PtrTask)(uint8_t, uint8_t);
+typedef uint8_t (*PtrTask)(uint8_t, uint8_t);
 
 typedef enum {
     Task_ID_1 = 1,
@@ -36,6 +36,6 @@ typedef enum {
 	Total_Burst
 }enBurstTimes;
 
-extern void Task_execute(uint8_t u8BurstTime, uint8_t u8TaskId);
+extern uint8_t Task_execute(uint8_t u8BurstTime, uint8_t u8TaskId);
 
 #endif /* SCHEDFIFO_H_ */

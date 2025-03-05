@@ -43,6 +43,8 @@ uint8_t u8TaskInBuff = 0U;
 /*******************************************************************************
  * Code
  ******************************************************************************/
+
+/*This function changes the status of a task from 'suspended' to 'ready'*/
 static void vChangeStatus(uint8_t u8TaskId)
 {
 	for(uint8_t u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS; u8Index++)
@@ -55,6 +57,7 @@ static void vChangeStatus(uint8_t u8TaskId)
 	}
 }
 
+/*This function adds all tasks with a 'ready' status to the queue*/
 static void vAddTasks2Buff(void)
 {
 	uint8_t u8InBuffFlag = 0U;
@@ -87,9 +90,11 @@ static void vAddTasks2Buff(void)
 	}
 }
 
+/*This function executes the tasks */
 static void vExecuteTasks(void)
 {
 	uint8_t u8TaskId_Index = TOTAL_TASKS;
+	uint8_t u8TaskState = 0U;
 	uint8_t u8TaskId = Task_RdyBuff[FIRST_INPUT].u8TaskID;
 	uint8_t u8TaskBurst = Task_RdyBuff[FIRST_INPUT].u8BurstTime;
 
@@ -105,11 +110,16 @@ static void vExecuteTasks(void)
 	if(u8TaskId_Index < (uint8_t)TOTAL_TASKS)
 	{
 		Task_Config[u8TaskId_Index].u8TaskState = (uint8_t)Task_Running;
-		Task_RdyBuff[FIRST_INPUT].PtrFunc(u8TaskBurst, u8TaskId);
-		Task_Config[u8TaskId_Index].u8TaskState = (uint8_t)Task_Suspended;
+		u8TaskState = Task_RdyBuff[FIRST_INPUT].PtrFunc(u8TaskBurst, u8TaskId);
+
+		if(u8TaskState)
+		{
+			Task_Config[u8TaskId_Index].u8TaskState = (uint8_t)Task_Suspended;
+		}
 	}
 }
 
+/*This function deletes executed tasks from the queue */
 static void vDequeue(void)
 {
 	uint8_t u8TaskId_Index = TOTAL_TASKS;
@@ -144,7 +154,7 @@ static void vDequeue(void)
 	}
 }
 
-/*This function evaluates values set on StatesDefinition*/
+/*This function evaluates values set on TaskScheduler*/
 static void vCheckConfig(void)
 {
 	uint8_t u8Index = (uint8_t)0U;
@@ -158,12 +168,31 @@ static void vCheckConfig(void)
 	}
 }
 
-void Task_execute(uint8_t u8BurstTime, uint8_t u8TaskId)
+uint8_t Task_execute(uint8_t u8BurstTime, uint8_t u8TaskId)
 {
-	PRINTF("Task %d running\r\n", u8TaskId);
-	PRINTF("Waiting %d ms\r\n", u8BurstTime);
+	static uint8_t u8Counter = 0U;
+	static uint8_t u8Flag = 0U;
+	uint8_t u8State = 0U;
 
-	SDK_DelayAtLeastUs((u8BurstTime * 1000), SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
+	if(u8Flag == 0U)
+	{
+		PRINTF("Task %d running\r\n", u8TaskId);
+		u8Flag = 1U;
+	}
+
+	if(u8Counter <= u8BurstTime)
+	{
+		PRINTF("%d ms\r\n", u8Counter);
+		u8Counter++;
+	}
+	else
+	{
+		u8State = 1U;
+		u8Counter = 0U;
+		u8Flag = 0U;
+	}
+
+	return u8State;
 }
 
 void vInit(void)
@@ -180,7 +209,7 @@ void vInit(void)
  */
 int main(void)
 {
-	/*Check elements set in StatesDefinition*/
+	/*Check elements set in TaskScheduler*/
 	vCheckConfig();
 
 	/*Init drivers*/
@@ -198,7 +227,7 @@ int main(void)
 
     	vAddTasks2Buff();
 
-    	if((Task_RdyBuff[FIRST_INPUT].u8TaskState == (uint8_t)Task_Ready)&&(Task_RdyBuff[FIRST_INPUT].PtrFunc != (PtrTask)NULL))
+    	if(Task_RdyBuff[FIRST_INPUT].PtrFunc != (PtrTask)NULL)
     	{
     		vExecuteTasks();
 
