@@ -15,20 +15,30 @@
 #include "app.h"
 #include "pin_mux.h"
 #include "board.h"
-#include "SchedFIFO_cfg.h"
+#include "SchedPrio_cfg.h"
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
 #define TOTAL_TASKS (TotalTasks - 1)
 #define FIRST_INPUT (0)
 #define LAST_INPUT	(TOTAL_TASKS - 1)
+#define MAX_NODES 	(TOTAL_TASKS)
 
 typedef struct {
 	uint8_t u8TaskID;
 	PtrTask PtrFunc;
-	uint8_t u8BurstTime;
+	uint8_t u8Priority;
 	uint8_t u8TaskState;
 }stTasksFt;
+
+typedef struct stLinkedList{
+	struct stLinkedList* pPrevNode;
+	struct stLinkedList* pNextNode;
+	stTasksFt* pstNodeData;
+}stLinkedList;
+
+
+//typedef struct stLinkedList stLinkedListn;
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -37,66 +47,213 @@ typedef struct {
  * Variables
  ******************************************************************************/
 stTasksFt Task_Config[TOTAL_TASKS] = TaskScheduler;
-stTasksFt Task_RdyBuff[TOTAL_TASKS] = {0};
-uint8_t u8TaskInBuff = 0U;
+stLinkedList LinkedListNodes[MAX_NODES];
+stLinkedList* Task_RdyListHead;
+//stTasksFt Task_RdyBuff[TOTAL_TASKS] = {0};
+//uint8_t u8TaskInBuff = 0U;
 
 /*******************************************************************************
  * Code
  ******************************************************************************/
 
 /*This function changes the status of a task from 'suspended' to 'ready'*/
-static void vChangeStatus(uint8_t u8TaskId)
+static void vChangeStatus(void)
 {
 	for(uint8_t u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS; u8Index++)
 	{
-		if(Task_Config[u8Index].u8TaskID == u8TaskId)
+		if(Task_Config[u8Index].u8TaskState == (uint8_t)Task_Suspended)
 		{
 			Task_Config[u8Index].u8TaskState = (uint8_t)Task_Ready;
-			break;
 		}
 	}
 }
 
+static void vAddNewNode(uint8_t u8IndexData)
+{
+	stLinkedList* pstNode = (stLinkedList*)Task_RdyListHead;
+	uint8_t u8NewNode = 0xFF;
+
+	for(uint8_t u8Index = 0U; u8Index < MAX_NODES; u8Index++)
+	{
+		if(LinkedListNodes[u8Index].pstNodeData == (stTasksFt*)NULL)
+		{
+			u8NewNode = u8Index;
+			break;
+		}
+	}
+
+	if(u8NewNode != (uint8_t)0xFF)
+	{
+		if(pstNode != (stLinkedList*)NULL)
+		{
+			while(pstNode->pNextNode != (stLinkedList*)NULL)
+			{
+				pstNode = pstNode->pNextNode;
+			}
+
+			pstNode->pNextNode = (stLinkedList*)&LinkedListNodes[u8NewNode];
+			pstNode->pNextNode->pPrevNode = pstNode;
+			pstNode->pNextNode->pstNodeData = (stTasksFt*)&Task_Config[u8IndexData];
+		}
+		else
+		{
+			Task_RdyListHead = (stLinkedList*)&LinkedListNodes[u8NewNode];
+			Task_RdyListHead->pstNodeData = (stTasksFt*)&Task_Config[u8IndexData];
+		}
+	}
+}
+
+static stLinkedList* pstSearchNode(uint8_t u8IndexData)
+{
+	stLinkedList* pstNode = (stLinkedList*)NULL;
+	stLinkedList* pstNodeFound = (stLinkedList*)NULL;
+
+	pstNode = Task_RdyListHead;
+
+	while(pstNode != (stLinkedList*)NULL)
+	{
+		if(Task_Config[u8IndexData].u8TaskID == pstNode->pstNodeData->u8TaskID)
+		{
+			pstNodeFound = pstNode;
+			break;
+		}
+
+		pstNode = pstNode->pNextNode;
+	}
+
+	return pstNodeFound;
+}
+
+//static void vAddNewNode(uint8_t u8IndexData)
+//{
+//	stLinkedList* pstNode = (stLinkedList*)NULL;
+////	stLinkedList* pstNodeAux = (stLinkedList*)NULL;S
+//
+//	pstNode = Task_RdyListHead;
+//
+//	while(pstNode != (stLinkedList*)NULL)
+//	{
+//		pstNode = pstNode->pNextNode;
+//	}
+//
+////	while(pstNode->pNextNode != (stLinkedList*)NULL)
+////	{
+////		pstNode = pstNode->pNextNode;
+////	}
+//
+//	pstNode->stNodeData.u8TaskID = Task_Config[u8IndexData].u8TaskID;
+//	pstNode->stNodeData.u8Priority = Task_Config[u8IndexData].u8Priority;
+//	pstNode->stNodeData.PtrFunc = Task_Config[u8IndexData].PtrFunc;
+//	pstNode->stNodeData.u8TaskState = Task_Config[u8IndexData].u8TaskState;
+//
+//	pstNode->pNextNode = (stLinkedList*)NULL;
+//	pstNode->pPrevNode
+//}
+
 /*This function adds all tasks with a 'ready' status to the queue*/
 static void vAddTasks2Buff(void)
 {
-	uint8_t u8InBuffFlag = 0U;
+	stLinkedList* pstNodeFound = (stLinkedList*)NULL;
+//	stLinkedList* pstNodeAux = (stLinkedList*)NULL;
 
-	for(uint8_t u8Index = 0U; (u8Index < (uint8_t)TOTAL_TASKS)&&(u8TaskInBuff < TOTAL_TASKS); u8Index++)
+//	pstNode = Task_RdyListHead;
+
+	for(uint8_t u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS; u8Index++)
 	{
-		u8InBuffFlag = 0U;
 
 		if(Task_Config[u8Index].u8TaskState == (uint8_t)Task_Ready)
 		{
-			for(uint8_t u8IndexBuff = 0U; u8IndexBuff < (uint8_t)TOTAL_TASKS; u8IndexBuff++)
+			pstNodeFound = pstSearchNode(u8Index);
+
+			/*for(uint8_t u8IndexBuff = 0U; u8IndexBuff < (uint8_t)TOTAL_TASKS; u8IndexBuff++)
 			{
 				if(Task_Config[u8Index].u8TaskID == Task_RdyBuff[u8IndexBuff].u8TaskID)
 				{
 					u8InBuffFlag = 1U;
 					break;
 				}
-			}
+			}*/
 
-			if(u8InBuffFlag == 0U)
+			if(pstNodeFound == (stLinkedList*)NULL)
 			{
-				Task_RdyBuff[u8TaskInBuff].PtrFunc = Task_Config[u8Index].PtrFunc;
-				Task_RdyBuff[u8TaskInBuff].u8BurstTime = Task_Config[u8Index].u8BurstTime;
-				Task_RdyBuff[u8TaskInBuff].u8TaskID = Task_Config[u8Index].u8TaskID;
-				Task_RdyBuff[u8TaskInBuff].u8TaskState = Task_Config[u8Index].u8TaskState;
+				vAddNewNode(u8Index);
 
-				u8TaskInBuff++;
+//				Task_RdyBuff[u8TaskInBuff].PtrFunc = Task_Config[u8Index].PtrFunc;
+//				Task_RdyBuff[u8TaskInBuff].u8BurstTime = Task_Config[u8Index].u8BurstTime;
+//				Task_RdyBuff[u8TaskInBuff].u8TaskID = Task_Config[u8Index].u8TaskID;
+//				Task_RdyBuff[u8TaskInBuff].u8TaskState = Task_Config[u8Index].u8TaskState;
 			}
 		}
 	}
 }
 
+static void vSwapNodes(stLinkedList* pstNode)
+{
+	stLinkedList pstNodeAux;
+//	stLinkedList* pstNodeAux2 = (stLinkedList*)NULL;
+
+	pstNodeAux.pNextNode = pstNode->pNextNode;
+	pstNodeAux.pPrevNode = pstNode->pPrevNode;
+//	pstNodeAux2 = pstNode->pNextNode;
+
+	pstNode->pPrevNode = pstNode->pNextNode;
+	pstNode->pNextNode = pstNode->pNextNode->pNextNode;
+
+	if(pstNodeAux.pPrevNode != (stLinkedList*)NULL)
+	{
+		pstNodeAux.pPrevNode->pNextNode = pstNodeAux.pNextNode;
+	}
+
+	if(pstNodeAux.pNextNode->pNextNode != (stLinkedList*)NULL)
+	{
+		pstNodeAux.pNextNode->pNextNode->pPrevNode = pstNodeAux.pNextNode->pPrevNode;
+	}
+
+	pstNodeAux.pNextNode->pNextNode = pstNode;
+	pstNodeAux.pNextNode->pPrevNode = pstNodeAux.pPrevNode;
+}
+
+static void vRearrangeTasks(void)
+{
+	stLinkedList* pstNode = (stLinkedList*)NULL;
+	uint8_t u8Flag = 0U;
+
+	do
+	{
+		u8Flag = 0U;
+		pstNode = Task_RdyListHead;
+
+		while(pstNode->pNextNode != (stLinkedList*)NULL)
+		{
+			if(pstNode->pstNodeData->u8Priority > pstNode->pNextNode->pstNodeData->u8Priority)
+			{
+				if(pstNode == Task_RdyListHead)
+				{
+					Task_RdyListHead = pstNode->pNextNode;
+				}
+
+				vSwapNodes(pstNode);
+				u8Flag = 1U;
+			}
+			else
+			{
+				pstNode = pstNode->pNextNode;
+			}
+		}
+	}while(u8Flag);
+}
+
 /*This function executes the tasks */
 static void vExecuteTasks(void)
 {
+	stLinkedList* pstNode = (stLinkedList*)Task_RdyListHead;
 	uint8_t u8TaskId_Index = TOTAL_TASKS;
-	uint8_t u8TaskState = 0U;
-	uint8_t u8TaskId = Task_RdyBuff[FIRST_INPUT].u8TaskID;
-	uint8_t u8TaskBurst = Task_RdyBuff[FIRST_INPUT].u8BurstTime;
+	uint8_t u8TaskId = 0U;
+
+	if(pstNode != (stLinkedList*)NULL)
+	{
+		u8TaskId = pstNode->pstNodeData->u8TaskID;
+	}
 
 	for(uint8_t u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS; u8Index++)
 	{
@@ -107,24 +264,26 @@ static void vExecuteTasks(void)
 		}
 	}
 
-	if(u8TaskId_Index < (uint8_t)TOTAL_TASKS)
+	if((u8TaskId_Index < (uint8_t)TOTAL_TASKS)&&(pstNode->pstNodeData->PtrFunc != (stLinkedList*)NULL))
 	{
 		Task_Config[u8TaskId_Index].u8TaskState = (uint8_t)Task_Running;
-		u8TaskState = Task_RdyBuff[FIRST_INPUT].PtrFunc(u8TaskBurst, u8TaskId);
-
-		if(u8TaskState)
-		{
-			Task_Config[u8TaskId_Index].u8TaskState = (uint8_t)Task_Suspended;
-		}
+		pstNode->pstNodeData->PtrFunc(u8TaskId);
+		Task_Config[u8TaskId_Index].u8TaskState = (uint8_t)Task_Suspended;
 	}
 }
 
 /*This function deletes executed tasks from the queue */
 static void vDequeue(void)
 {
+	stLinkedList* pstNode = (stLinkedList*)Task_RdyListHead;
+	stLinkedList* pstNodeAux = (stLinkedList*)NULL;
 	uint8_t u8TaskId_Index = TOTAL_TASKS;
-	uint8_t u8TaskId = Task_RdyBuff[FIRST_INPUT].u8TaskID;
-	uint8_t u8TaskBurst = Task_RdyBuff[FIRST_INPUT].u8BurstTime;
+	uint8_t u8TaskId = 0U;
+
+	if(pstNode != (stLinkedList*)NULL)
+	{
+		u8TaskId = pstNode->pstNodeData->u8TaskID;
+	}
 
 	for(uint8_t u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS; u8Index++)
 	{
@@ -137,20 +296,27 @@ static void vDequeue(void)
 
 	if(Task_Config[u8TaskId_Index].u8TaskState == (uint8_t)Task_Suspended)
 	{
-		for(uint8_t u8TaskIndex = 0U; u8TaskIndex < (uint8_t)(TOTAL_TASKS - 1); u8TaskIndex++)
-		{
-			Task_RdyBuff[u8TaskIndex].PtrFunc = Task_RdyBuff[u8TaskIndex + 1].PtrFunc;
-			Task_RdyBuff[u8TaskIndex].u8BurstTime = Task_RdyBuff[u8TaskIndex + 1].u8BurstTime;
-			Task_RdyBuff[u8TaskIndex].u8TaskID = Task_RdyBuff[u8TaskIndex + 1].u8TaskID;
-			Task_RdyBuff[u8TaskIndex].u8TaskState = Task_RdyBuff[u8TaskIndex + 1].u8TaskState;
-		}
+		pstNodeAux = pstNode;
+		Task_RdyListHead = pstNode->pNextNode;
+		pstNode->pstNodeData = (stTasksFt*)NULL;
+		pstNode->pNextNode->pPrevNode = (stLinkedList*)NULL;
+		pstNode->pNextNode = (stLinkedList*)NULL;
+		pstNode->pPrevNode = (stLinkedList*)NULL;
 
-		Task_RdyBuff[LAST_INPUT].PtrFunc = (PtrTask)NULL;
-		Task_RdyBuff[LAST_INPUT].u8BurstTime = 0U;
-		Task_RdyBuff[LAST_INPUT].u8TaskID = 0U;
-		Task_RdyBuff[LAST_INPUT].u8TaskState = 0U;
-
-		u8TaskInBuff--;
+//		for(uint8_t u8TaskIndex = 0U; u8TaskIndex < (uint8_t)(TOTAL_TASKS - 1); u8TaskIndex++)
+//		{
+//			Task_RdyBuff[u8TaskIndex].PtrFunc = Task_RdyBuff[u8TaskIndex + 1].PtrFunc;
+//			Task_RdyBuff[u8TaskIndex].u8BurstTime = Task_RdyBuff[u8TaskIndex + 1].u8BurstTime;
+//			Task_RdyBuff[u8TaskIndex].u8TaskID = Task_RdyBuff[u8TaskIndex + 1].u8TaskID;
+//			Task_RdyBuff[u8TaskIndex].u8TaskState = Task_RdyBuff[u8TaskIndex + 1].u8TaskState;
+//		}
+//
+//		Task_RdyBuff[LAST_INPUT].PtrFunc = (PtrTask)NULL;
+//		Task_RdyBuff[LAST_INPUT].u8BurstTime = 0U;
+//		Task_RdyBuff[LAST_INPUT].u8TaskID = 0U;
+//		Task_RdyBuff[LAST_INPUT].u8TaskState = 0U;
+//
+//		u8TaskInBuff--;
 	}
 }
 
@@ -162,37 +328,16 @@ static void vCheckConfig(void)
 	for(u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS; u8Index++)
 	{
 		assert(Task_Config[u8Index].PtrFunc != (PtrTask)NULL);
-		assert(Task_Config[u8Index].u8BurstTime < (uint8_t)Total_Burst);
+		assert(Task_Config[u8Index].u8Priority > 0U);
 		assert(Task_Config[u8Index].u8TaskID < (uint8_t)TotalTasks);
 		assert(Task_Config[u8Index].u8TaskState < (uint8_t)Total_States);
 	}
 }
 
-uint8_t Task_execute(uint8_t u8BurstTime, uint8_t u8TaskId)
+void Task_execute(uint8_t u8TaskId)
 {
-	static uint8_t u8Counter = 0U;
-	static uint8_t u8Flag = 0U;
-	uint8_t u8State = 0U;
-
-	if(u8Flag == 0U)
-	{
-		PRINTF("Task %d running\r\n", u8TaskId);
-		u8Flag = 1U;
-	}
-
-	if(u8Counter <= u8BurstTime)
-	{
-		PRINTF("%d ms\r\n", u8Counter);
-		u8Counter++;
-	}
-	else
-	{
-		u8State = 1U;
-		u8Counter = 0U;
-		u8Flag = 0U;
-	}
-
-	return u8State;
+	PRINTF("Task %d running\r\n", u8TaskId);
+ 	SDK_DelayAtLeastUs(1000, SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
 }
 
 void vInit(void)
@@ -201,6 +346,24 @@ void vInit(void)
 
     /* Print a note to terminal. */
     PRINTF("\r\n Scheduler FIFO\r\n");
+
+//    Task_RdyListHead = (stLinkedList*)&LinkedListNodes[0];
+
+    Task_RdyListHead = (stLinkedList*)NULL;
+//    Task_RdyListHead->pNextNode = (stLinkedList*)NULL;
+//	Task_RdyListHead->pPrevNode = (stLinkedList*)NULL;
+//	Task_RdyListHead->pstNodeData = (stTasksFt*)NULL;
+
+	for(uint8_t u8Index = 0U; u8Index < MAX_NODES; u8Index++)
+	{
+		LinkedListNodes[u8Index].pstNodeData = (stTasksFt*)NULL;
+		LinkedListNodes[u8Index].pPrevNode = (stLinkedList*)NULL;
+		LinkedListNodes[u8Index].pNextNode = (stLinkedList*)NULL;
+	}
+
+//    Task_RdyListHead.pNextNode = (stLinkedList*)NULL;
+//    Task_RdyListHead.pPrevNode = (stLinkedList*)NULL;
+//    Task_RdyListHead.stNodeData = 0;
 }
 
 
@@ -217,21 +380,14 @@ int main(void)
 
     while (1)
     {
-    	for(uint8_t u8TaskIndex = 0U; u8TaskIndex < (uint8_t)TOTAL_TASKS; u8TaskIndex++)
-    	{
-    		if(Task_Config[u8TaskIndex].u8TaskState == (uint8_t)Task_Suspended)
-    		{
-    			vChangeStatus(Task_Config[u8TaskIndex].u8TaskID);
-    		}
-    	}
+    	vChangeStatus();
 
     	vAddTasks2Buff();
 
-    	if(Task_RdyBuff[FIRST_INPUT].PtrFunc != (PtrTask)NULL)
-    	{
-    		vExecuteTasks();
+		vExecuteTasks();
 
-    		vDequeue();
-    	}
+		vDequeue();
+
+		vRearrangeTasks();
     }
 }
