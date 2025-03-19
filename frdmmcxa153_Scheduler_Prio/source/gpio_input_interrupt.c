@@ -234,7 +234,7 @@ static void vExecuteTasks(void)
 		}
 	}
 
-	if((u8TaskId_Index < (uint8_t)TOTAL_TASKS)&&(pstNode->pstNodeData->PtrFunc != (stLinkedList*)NULL))
+	if(u8TaskId_Index < (uint8_t)TOTAL_TASKS)
 	{
 		Task_Config[u8TaskId_Index].u8TaskState = (uint8_t)Task_Running;
 		pstNode->pstNodeData->PtrFunc(u8TaskId);
