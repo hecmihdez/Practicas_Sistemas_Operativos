@@ -36,8 +36,6 @@ typedef struct stLinkedList{
 	stTasksFt* pstNodeData;
 }stLinkedList;
 
-
-//typedef struct stLinkedList stLinkedListn;
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -49,8 +47,6 @@ volatile bool g_ButtonPress = false;
 stTasksFt Task_Config[TOTAL_TASKS] = TaskScheduler;
 stLinkedList LinkedListNodes[MAX_NODES];
 stLinkedList* Task_RdyListHead;
-//stTasksFt Task_RdyBuff[TOTAL_TASKS] = {0};
-//uint8_t u8TaskInBuff = 0U;
 
 /*******************************************************************************
  * Code
@@ -143,39 +139,10 @@ static stLinkedList* pstSearchNode(uint8_t u8IndexData)
 	return pstNodeFound;
 }
 
-//static void vAddNewNode(uint8_t u8IndexData)
-//{
-//	stLinkedList* pstNode = (stLinkedList*)NULL;
-////	stLinkedList* pstNodeAux = (stLinkedList*)NULL;S
-//
-//	pstNode = Task_RdyListHead;
-//
-//	while(pstNode != (stLinkedList*)NULL)
-//	{
-//		pstNode = pstNode->pNextNode;
-//	}
-//
-////	while(pstNode->pNextNode != (stLinkedList*)NULL)
-////	{
-////		pstNode = pstNode->pNextNode;
-////	}
-//
-//	pstNode->stNodeData.u8TaskID = Task_Config[u8IndexData].u8TaskID;
-//	pstNode->stNodeData.u8Priority = Task_Config[u8IndexData].u8Priority;
-//	pstNode->stNodeData.PtrFunc = Task_Config[u8IndexData].PtrFunc;
-//	pstNode->stNodeData.u8TaskState = Task_Config[u8IndexData].u8TaskState;
-//
-//	pstNode->pNextNode = (stLinkedList*)NULL;
-//	pstNode->pPrevNode
-//}
-
 /*This function adds all tasks with a 'ready' status to the queue*/
 static void vAddTasks2Buff(void)
 {
 	stLinkedList* pstNodeFound = (stLinkedList*)NULL;
-//	stLinkedList* pstNodeAux = (stLinkedList*)NULL;
-
-//	pstNode = Task_RdyListHead;
 
 	for(uint8_t u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS; u8Index++)
 	{
@@ -184,23 +151,9 @@ static void vAddTasks2Buff(void)
 		{
 			pstNodeFound = pstSearchNode(u8Index);
 
-			/*for(uint8_t u8IndexBuff = 0U; u8IndexBuff < (uint8_t)TOTAL_TASKS; u8IndexBuff++)
-			{
-				if(Task_Config[u8Index].u8TaskID == Task_RdyBuff[u8IndexBuff].u8TaskID)
-				{
-					u8InBuffFlag = 1U;
-					break;
-				}
-			}*/
-
 			if(pstNodeFound == (stLinkedList*)NULL)
 			{
 				vAddNewNode(u8Index);
-
-//				Task_RdyBuff[u8TaskInBuff].PtrFunc = Task_Config[u8Index].PtrFunc;
-//				Task_RdyBuff[u8TaskInBuff].u8BurstTime = Task_Config[u8Index].u8BurstTime;
-//				Task_RdyBuff[u8TaskInBuff].u8TaskID = Task_Config[u8Index].u8TaskID;
-//				Task_RdyBuff[u8TaskInBuff].u8TaskState = Task_Config[u8Index].u8TaskState;
 			}
 		}
 	}
@@ -209,11 +162,9 @@ static void vAddTasks2Buff(void)
 static void vSwapNodes(stLinkedList* pstNode)
 {
 	stLinkedList pstNodeAux;
-//	stLinkedList* pstNodeAux2 = (stLinkedList*)NULL;
 
 	pstNodeAux.pNextNode = pstNode->pNextNode;
 	pstNodeAux.pPrevNode = pstNode->pPrevNode;
-//	pstNodeAux2 = pstNode->pNextNode;
 
 	pstNode->pPrevNode = pstNode->pNextNode;
 	pstNode->pNextNode = pstNode->pNextNode->pNextNode;
@@ -321,21 +272,6 @@ static void vDequeue(void)
 		pstNode->pNextNode->pPrevNode = (stLinkedList*)NULL;
 		pstNode->pNextNode = (stLinkedList*)NULL;
 		pstNode->pPrevNode = (stLinkedList*)NULL;
-
-//		for(uint8_t u8TaskIndex = 0U; u8TaskIndex < (uint8_t)(TOTAL_TASKS - 1); u8TaskIndex++)
-//		{
-//			Task_RdyBuff[u8TaskIndex].PtrFunc = Task_RdyBuff[u8TaskIndex + 1].PtrFunc;
-//			Task_RdyBuff[u8TaskIndex].u8BurstTime = Task_RdyBuff[u8TaskIndex + 1].u8BurstTime;
-//			Task_RdyBuff[u8TaskIndex].u8TaskID = Task_RdyBuff[u8TaskIndex + 1].u8TaskID;
-//			Task_RdyBuff[u8TaskIndex].u8TaskState = Task_RdyBuff[u8TaskIndex + 1].u8TaskState;
-//		}
-//
-//		Task_RdyBuff[LAST_INPUT].PtrFunc = (PtrTask)NULL;
-//		Task_RdyBuff[LAST_INPUT].u8BurstTime = 0U;
-//		Task_RdyBuff[LAST_INPUT].u8TaskID = 0U;
-//		Task_RdyBuff[LAST_INPUT].u8TaskState = 0U;
-//
-//		u8TaskInBuff--;
 	}
 }
 
@@ -392,12 +328,7 @@ void vInit(void)
     GPIO_PinInit(BOARD_SW_GPIO, BOARD_SW_GPIO_PIN, &sw_config);
     GPIO_PinInit(BOARD_LED_GPIO, BOARD_LED_GPIO_PIN, &led_config);
 
-//    Task_RdyListHead = (stLinkedList*)&LinkedListNodes[0];
-
     Task_RdyListHead = (stLinkedList*)NULL;
-//    Task_RdyListHead->pNextNode = (stLinkedList*)NULL;
-//	Task_RdyListHead->pPrevNode = (stLinkedList*)NULL;
-//	Task_RdyListHead->pstNodeData = (stTasksFt*)NULL;
 
 	for(uint8_t u8Index = 0U; u8Index < MAX_NODES; u8Index++)
 	{
@@ -405,10 +336,6 @@ void vInit(void)
 		LinkedListNodes[u8Index].pPrevNode = (stLinkedList*)NULL;
 		LinkedListNodes[u8Index].pNextNode = (stLinkedList*)NULL;
 	}
-
-//    Task_RdyListHead.pNextNode = (stLinkedList*)NULL;
-//    Task_RdyListHead.pPrevNode = (stLinkedList*)NULL;
-//    Task_RdyListHead.stNodeData = 0;
 }
 
 

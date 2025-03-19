@@ -6,7 +6,7 @@
  */
 
 #ifndef SCHEDPRIO_CFG_H_
-#define SCHEDFIFO_CFG_H_
+#define SCHEDPRIO_CFG_H_
 
 #include "SchedPrio.h"
 
