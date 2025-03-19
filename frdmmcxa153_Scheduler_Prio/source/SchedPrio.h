@@ -18,6 +18,7 @@ typedef enum {
 	Task_ID_5,
 	Task_ID_6,
 	Task_ID_7,
+	Task_ID_HPrio,
     TotalTasks
 }enTaskIds;
 
@@ -29,5 +30,6 @@ typedef enum {
 }enTaskStates;
 
 extern void Task_execute(uint8_t u8TaskId);
+extern void Task_execute_HighPrio(uint8_t u8TaskId);
 
 #endif /* SCHEDPRIO_H_ */

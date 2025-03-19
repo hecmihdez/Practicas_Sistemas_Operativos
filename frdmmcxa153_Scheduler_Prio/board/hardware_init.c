@@ -15,6 +15,9 @@
 /*${function:start}*/
 void BOARD_InitHardware(void)
 {
+    CLOCK_EnableClock(kCLOCK_GateGPIO3);
+    CLOCK_EnableClock(kCLOCK_GateGPIO1);
+
     BOARD_InitPins();
     BOARD_InitBootClocks();
     BOARD_InitDebugConsole();

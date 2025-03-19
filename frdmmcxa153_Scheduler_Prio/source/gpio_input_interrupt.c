@@ -20,8 +20,7 @@
  * Definitions
  ******************************************************************************/
 #define TOTAL_TASKS (TotalTasks - 1)
-#define FIRST_INPUT (0)
-#define LAST_INPUT	(TOTAL_TASKS - 1)
+#define HIGH_PRIO_INDEX (Task_ID_HPrio - 1)
 #define MAX_NODES 	(TOTAL_TASKS)
 
 typedef struct {
@@ -46,6 +45,7 @@ typedef struct stLinkedList{
 /*******************************************************************************
  * Variables
  ******************************************************************************/
+volatile bool g_ButtonPress = false;
 stTasksFt Task_Config[TOTAL_TASKS] = TaskScheduler;
 stLinkedList LinkedListNodes[MAX_NODES];
 stLinkedList* Task_RdyListHead;
@@ -55,16 +55,35 @@ stLinkedList* Task_RdyListHead;
 /*******************************************************************************
  * Code
  ******************************************************************************/
+/*!
+ * @brief Interrupt service fuction of switch.
+ *
+ * This functions change interrupt flags state
+ */
+void BOARD_SW_IRQ_HANDLER(void)
+{
+    GPIO_GpioClearInterruptFlags(BOARD_SW_GPIO, 1U << BOARD_SW_GPIO_PIN);
+    /* Change state of button. */
+    g_ButtonPress = true;
+    SDK_ISR_EXIT_BARRIER;
+}
+
 
 /*This function changes the status of a task from 'suspended' to 'ready'*/
 static void vChangeStatus(void)
 {
-	for(uint8_t u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS; u8Index++)
+	for(uint8_t u8Index = 0U; u8Index < (uint8_t)TOTAL_TASKS - 1; u8Index++)
 	{
 		if(Task_Config[u8Index].u8TaskState == (uint8_t)Task_Suspended)
 		{
 			Task_Config[u8Index].u8TaskState = (uint8_t)Task_Ready;
 		}
+	}
+
+	if(g_ButtonPress == true)
+	{
+		Task_Config[HIGH_PRIO_INDEX].u8TaskState = (uint8_t)Task_Ready;
+		g_ButtonPress = false;
 	}
 }
 
@@ -340,12 +359,38 @@ void Task_execute(uint8_t u8TaskId)
  	SDK_DelayAtLeastUs(1000, SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
 }
 
+void Task_execute_HighPrio(uint8_t u8TaskId)
+{
+	PRINTF("Task %d running\r\n", u8TaskId);
+	SDK_DelayAtLeastUs(1000, SDK_DEVICE_MAXIMUM_CPU_CLOCK_FREQUENCY);
+	GPIO_PortToggle(BOARD_LED_GPIO, 1u << BOARD_LED_GPIO_PIN);
+}
+
 void vInit(void)
 {
+    /* Define the init structure for the input switch pin */
+    gpio_pin_config_t sw_config = {
+        kGPIO_DigitalInput,
+        0,
+    };
+
+    /* Define the init structure for the output LED pin */
+    gpio_pin_config_t led_config = {
+        kGPIO_DigitalOutput,
+        0,
+    };
+
     BOARD_InitHardware();
 
     /* Print a note to terminal. */
-    PRINTF("\r\n Scheduler FIFO\r\n");
+    PRINTF("\r\n Scheduler PRIORITY\r\n");
+
+    GPIO_SetPinInterruptConfig(BOARD_SW_GPIO, BOARD_SW_GPIO_PIN, kGPIO_InterruptFallingEdge);
+
+    EnableIRQ(BOARD_SW_IRQ);
+
+    GPIO_PinInit(BOARD_SW_GPIO, BOARD_SW_GPIO_PIN, &sw_config);
+    GPIO_PinInit(BOARD_LED_GPIO, BOARD_LED_GPIO_PIN, &led_config);
 
 //    Task_RdyListHead = (stLinkedList*)&LinkedListNodes[0];
 
@@ -384,10 +429,10 @@ int main(void)
 
     	vAddTasks2Buff();
 
+    	vRearrangeTasks();
+
 		vExecuteTasks();
 
 		vDequeue();
-
-		vRearrangeTasks();
     }
 }
