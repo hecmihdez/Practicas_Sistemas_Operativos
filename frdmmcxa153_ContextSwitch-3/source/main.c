@@ -10,11 +10,16 @@
 #include "fsl_device_registers.h"
 #include "fsl_debug_console.h"
 #include "board.h"
+#include "app.h"
+#include "tasks.h"
+#include "fsl_clock.h"
 
 //#include "app.h"
 
 // system tick frequency
 #define SYSTICK_FREQUENCY_HZ  20  //20 hertz is 50 ms for a systick.
+
+extern uint32_t CLOCK_GetMainClk(void);
 
 static void delay(volatile int count)
 {
@@ -24,42 +29,52 @@ static void delay(volatile int count)
 
 void task1(void *userdata)
 {
-	PRINTF(userdata);
-	PRINTF(": Running...1\n\r");
-	delay(100);
-	task_self_terminal();
+	while(1)
+	{
+		PRINTF(userdata);
+		PRINTF(": Running...1\n\r");
+		delay(100);
+	}
 }
 
 void task2(void *userdata)
 {
-	PRINTF(userdata);
-	PRINTF(": Running...2\n\r");
-	delay(100);
-	task_self_terminal();
+	while(1)
+	{
+		PRINTF(userdata);
+		PRINTF(": Running...2\n\r");
+		delay(100);
+	}
 }
 
 void task3(void *userdata)
 {
-	PRINTF(userdata);
-	PRINTF(": Running...3\n\r");
-	delay(100);
-	task_self_terminal();
+	while(1)
+	{
+		PRINTF(userdata);
+		PRINTF(": Running...3\n\r");
+		delay(100);
+	}
 }
 
 void task4(void *userdata)
 {
-	PRINTF(userdata);
-	PRINTF(": Running...4\n\r");
-	delay(100);
-	task_self_terminal();
+	while(1)
+	{
+		PRINTF(userdata);
+		PRINTF(": Running...4\n\r");
+		delay(100);
+	}
 }
 
 void task5(void *userdata)
 {
-	PRINTF(userdata);
-	PRINTF(": Running...5\n\r");
-	delay(100);
-	task_self_terminal();
+	while(1)
+	{
+		PRINTF(userdata);
+		PRINTF(": Running...5\n\r");
+		delay(100);
+	}
 }
 /*******************************************************************************
  * Definitions
@@ -109,7 +124,7 @@ int main(void)
 
 	task_start();
 
-	PRINTF("The execution of all the tasks ended!\n\r");
+//	PRINTF("The execution of all the tasks ended!\n\r");
 
 	while (1)
 		{};

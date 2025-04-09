@@ -18,7 +18,7 @@ void PendSV_Handler( void ) __attribute__ (( naked ));
 //0000120a:   vraddhn.i<illegal       width 128>      d27, <illegal reg q15.5>, q0
 //0000120e:   add     r7, sp, #0
 
-#define TASK_PSP	0xFFFFFFFD
+#define TASK_PSP	0xFFFFFFBC
 
 enum taskstatus
 {
@@ -42,7 +42,7 @@ static tcb_t tasks[MAX_TASKS];
 static int lastTask;
 static int first = 1;
 static int readyqueuestarted = 0;
-static int taskended = 0;
+//static int taskended = 0;
 
 /*
  The compiler does not generate prologue and epilogue sequences for functions with
@@ -89,29 +89,39 @@ switch or have our own register/stack handling in C function.
 
 void PendSV_Handler( void )
 {
-	if (tasks[lastTask].status == END)
+	if (tasks[lastTask].status == BLOCK)
 	{
-		if (!_isqueueempty(&ready)) //If the ready queue is not empty then we look for more tasks.
-		{
-			/* Find a new task to run */
-			lastTask = _dequeue(&ready);
-			tasks[lastTask].status = RUNNING;
+//		if (!_isqueueempty(&ready)) //If the ready queue is not empty then we look for more tasks.
+//		{
+		asm volatile("MRS     R0, PSP \n");
+		asm volatile("STMDB   R0!, {R4, R5, R6, R7, R8, R9, R10, R11, LR} \n");
 
-			/* Move the task's stack pointer address into r0 */
-			asm volatile("MOV     R0, %0\n" : : "r" (tasks[lastTask].stack));
-			/* Restore the new task's context and jump to the task */
-			asm volatile("LDMIA   R0!, {R4-R11, LR}\n");
-			asm volatile("MSR     PSP, R0\n");
-			asm volatile("BX      LR\n");
-		}
-		else //We return to the kernel (main() function) in case we finished all the tasks.
-		{
-			taskended = 1;
-			/* load kernel state */
-			asm volatile("POP     {R4, R5, R6, R7, R8, R9, R10, R11, IP, LR}  \n");
-			asm volatile("MSR     PSR_NZCVQ, IP \n");
-			asm volatile("BX      LR \n");
-		}
+		asm volatile("MOV     %0, R0\n" : "=r" (tasks[lastTask].stack));
+
+		tasks[lastTask].status = READY;
+
+		//add to the ready queue
+		_enqueue(&ready, lastTask);
+
+		/* Find a new task to run */
+		lastTask = _dequeue(&ready);
+		tasks[lastTask].status = RUNNING;
+
+		/* Move the task's stack pointer address into r0 */
+		asm volatile("MOV     R0, %0\n" : : "r" (tasks[lastTask].stack));
+		/* Restore the new task's context and jump to the task */
+		asm volatile("LDMIA   R0!, {R4-R11, LR}\n");
+		asm volatile("MSR     PSP, R0\n");
+		asm volatile("BX      LR\n");
+//		}
+//		else //We return to the kernel (main() function) in case we finished all the tasks.
+//		{
+//			taskended = 1;
+//			/* load kernel state */
+//			asm volatile("POP     {R4, R5, R6, R7, R8, R9, R10, R11, IP, LR}  \n");
+//			asm volatile("MSR     PSR_NZCVQ, IP \n");
+//			asm volatile("BX      LR \n");
+//		}
 	}
 	else
 	{
@@ -121,9 +131,9 @@ void PendSV_Handler( void )
 
 void SysTick_Handler(void)
 {
-	PRINTF("tick\r\n");
-	if (tasks[lastTask].status == END)
+	if (tasks[lastTask].status == RUNNING)
 	{
+		tasks[lastTask].status = BLOCK;
 		SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
 	}
 }
@@ -133,10 +143,10 @@ void task_start()
 	lastTask = _dequeue(&ready);
 	tasks[lastTask].status = RUNNING;
 
-	if (taskended)
-	{
-		return;
-	}
+//	if (taskended)
+//	{
+//		return;
+//	}
 
 	/* Save kernel context */
 	asm volatile ("MRS    IP, PSR \n"); //ip and/or IP - Intra procedure call scratch register. This is a synonym for R12.
