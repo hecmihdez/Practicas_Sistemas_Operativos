@@ -1,0 +1,9 @@
+C:\Users\nxa16972\Documents\MCUXpressoIDE_24.12.148\workspace\frdmmcxa153_ContextSwitch-3\CMSIS/core_cm33.h:2555:22:__NVIC_SetPriority	16	static
+C:\Users\nxa16972\Documents\MCUXpressoIDE_24.12.148\workspace\frdmmcxa153_ContextSwitch-3\CMSIS/core_cm33.h:3108:26:SysTick_Config	16	static
+../source/main.c:19:13:delay	16	static
+../source/main.c:25:6:task1	16	static
+../source/main.c:33:6:task2	16	static
+../source/main.c:41:6:task3	16	static
+../source/main.c:49:6:task4	16	static
+../source/main.c:57:6:task5	16	static
+../source/main.c:78:5:main	40	static

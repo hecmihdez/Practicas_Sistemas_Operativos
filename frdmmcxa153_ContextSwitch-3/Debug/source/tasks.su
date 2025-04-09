@@ -1,0 +1,6 @@
+../source/tasks.c:90:6:PendSV_Handler	0	static
+../source/tasks.c:122:6:SysTick_Handler	8	static
+../source/tasks.c:131:6:task_start	8	static
+../source/tasks.c:160:5:task_create	24	static
+../source/tasks.c:211:6:task_kill	16	static
+../source/tasks.c:219:6:task_self_terminal	8	static
