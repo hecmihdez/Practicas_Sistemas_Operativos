@@ -75,26 +75,6 @@ static int _isqueueempty(QUEUE *thequeue)
 	return(thequeue->head==thequeue->tail);
 }
 
-static int _isqueueavail(QUEUE *thequeue)
-{
-	int nextH = 0U;
-	uint8_t u8State = 0U;
-
-	nextH = thequeue->head + 1;
-	nextH = nextH%MAXELEMENTS;
-
-	if(nextH == thequeue->tail)
-	{
-		u8State = 0U;
-	}
-	else
-	{
-		u8State = 1U;
-	}
-
-	return u8State;
-}
-
 /*!
  * @brief Main function
  */
@@ -124,7 +104,7 @@ static void producer_task(void *pvParameters)
     uint8_t u8Enqueue;
 
     PRINTF("Producer_task created.\r\n");
-    xSemaphore_console = xSemaphoreCreateCounting( MAXELEMENTS, MAXELEMENTS );
+    xSemaphore_console = xSemaphoreCreateCounting( MAXELEMENTS-1 , MAXELEMENTS-1 );
     if (xSemaphore_console == NULL)
     {
         PRINTF("xSemaphore_producer creation failed.\r\n");
@@ -141,15 +121,14 @@ static void producer_task(void *pvParameters)
 
     while (1)
     {
-		u8Count = uxSemaphoreGetCount(xSemaphore_console);
-		u8Enqueue = _isqueueavail(&CircularBuff);
-
-		if((u8Count > 0)&&(u8NextChar < MSGSIZE)&&(u8Enqueue))
-		{
-			_enqueue(&CircularBuff,u8Message[u8NextChar]);
-			(void)xSemaphoreTake(xSemaphore_console, portMAX_DELAY);
-			u8NextChar++;
-		}
+    	if(u8NextChar < MSGSIZE)
+    	{
+    		if (xSemaphoreTake(xSemaphore_console, portMAX_DELAY) == pdTRUE)
+			{
+    			_enqueue(&CircularBuff,u8Message[u8NextChar]);
+    			u8NextChar++;
+			}
+    	}
 		else
 		{
 			taskYIELD();
