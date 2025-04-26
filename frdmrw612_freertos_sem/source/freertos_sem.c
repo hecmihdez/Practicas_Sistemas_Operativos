@@ -23,9 +23,20 @@
  * Definitions
  ******************************************************************************/
 #define TASK_PRIO          (configMAX_PRIORITIES - 1)
-#define CONSUMER_LINE_SIZE 3
-SemaphoreHandle_t xSemaphore_producer;
-SemaphoreHandle_t xSemaphore_consumer;
+#define MAXELEMENTS 5
+#define MSGSIZE		11
+
+typedef struct QUEUE {
+	int elements[MAXELEMENTS];
+	int head;
+	int tail;
+} QUEUE;
+
+QUEUE CircularBuff;
+SemaphoreHandle_t xSemaphore_console;
+static uint8_t u8Message[MSGSIZE] = {"ITESO_RULES"};
+static uint8_t u8NextChar = 0U;
+
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -35,6 +46,55 @@ static void consumer_task(void *pvParameters);
 /*******************************************************************************
  * Code
  ******************************************************************************/
+static void _initqueue(QUEUE *thequeue)
+{
+	thequeue->head=0;
+	thequeue->tail=0;
+}
+
+static void _enqueue(QUEUE *thequeue,int value)
+{
+	thequeue->elements[thequeue->head]=value;
+	// increase the pointer
+	thequeue->head++;
+	thequeue->head=thequeue->head%MAXELEMENTS;
+}
+
+static int _dequeue(QUEUE *thequeue)
+{
+	int valueret;
+	valueret=thequeue->elements[thequeue->tail];
+	// increase the pointer
+	thequeue->tail++;
+	thequeue->tail=thequeue->tail%MAXELEMENTS;
+	return(valueret);
+}
+
+static int _isqueueempty(QUEUE *thequeue)
+{
+	return(thequeue->head==thequeue->tail);
+}
+
+static int _isqueueavail(QUEUE *thequeue)
+{
+	int nextH = 0U;
+	uint8_t u8State = 0U;
+
+	nextH = thequeue->head + 1;
+	nextH = nextH%MAXELEMENTS;
+
+	if(nextH == thequeue->tail)
+	{
+		u8State = 0U;
+	}
+	else
+	{
+		u8State = 1U;
+	}
+
+	return u8State;
+}
+
 /*!
  * @brief Main function
  */
@@ -60,49 +120,40 @@ int main(void)
 static void producer_task(void *pvParameters)
 {
     uint32_t i;
+    uint8_t u8Count;
+    uint8_t u8Enqueue;
 
     PRINTF("Producer_task created.\r\n");
-    xSemaphore_producer = xSemaphoreCreateBinary();
-    if (xSemaphore_producer == NULL)
+    xSemaphore_console = xSemaphoreCreateCounting( MAXELEMENTS, MAXELEMENTS );
+    if (xSemaphore_console == NULL)
     {
         PRINTF("xSemaphore_producer creation failed.\r\n");
         vTaskSuspend(NULL);
     }
 
-    xSemaphore_consumer = xSemaphoreCreateBinary();
-    if (xSemaphore_consumer == NULL)
-    {
-        PRINTF("xSemaphore_consumer creation failed.\r\n");
-        vTaskSuspend(NULL);
-    }
+    _initqueue(&CircularBuff);
 
-    for (i = 0; i < CONSUMER_LINE_SIZE; i++)
+    if (xTaskCreate(consumer_task, "CONSUMER_TASK", configMINIMAL_STACK_SIZE + 128, NULL, TASK_PRIO, NULL) != pdPASS)
     {
-        if (xTaskCreate(consumer_task, "CONSUMER_TASK", configMINIMAL_STACK_SIZE + 128, (void *)i, TASK_PRIO, NULL) !=
-            pdPASS)
-        {
-            PRINTF("Task creation failed!.\r\n");
-            vTaskSuspend(NULL);
-        }
-        else
-        {
-            PRINTF("Consumer_task %d created.\r\n", i);
-        }
-    }
+		PRINTF("Task creation failed!.\r\n");
+		vTaskSuspend(NULL);
+	}
 
     while (1)
     {
-        /* Producer is ready to provide item. */
-        xSemaphoreGive(xSemaphore_consumer);
-        /* Producer is waiting when consumer will be ready to accept item. */
-        if (xSemaphoreTake(xSemaphore_producer, portMAX_DELAY) == pdTRUE)
-        {
-            PRINTF("Producer released item.\r\n");
-        }
-        else
-        {
-            PRINTF("Producer is waiting for customer.\r\n");
-        }
+		u8Count = uxSemaphoreGetCount(xSemaphore_console);
+		u8Enqueue = _isqueueavail(&CircularBuff);
+
+		if((u8Count > 0)&&(u8NextChar < MSGSIZE)&&(u8Enqueue))
+		{
+			_enqueue(&CircularBuff,u8Message[u8NextChar]);
+			(void)xSemaphoreTake(xSemaphore_console, portMAX_DELAY);
+			u8NextChar++;
+		}
+		else
+		{
+			taskYIELD();
+		}
     }
 }
 
@@ -111,19 +162,19 @@ static void producer_task(void *pvParameters)
  */
 static void consumer_task(void *pvParameters)
 {
-    PRINTF("Consumer number: %d\r\n", pvParameters);
+	uint8_t u8Value = 0U;
+
     while (1)
     {
-        /* Consumer is ready to accept. */
-        xSemaphoreGive(xSemaphore_producer);
-        /* Consumer is waiting when producer will be ready to produce item. */
-        if (xSemaphoreTake(xSemaphore_consumer, portMAX_DELAY) == pdTRUE)
-        {
-            PRINTF("Consumer %d accepted item.\r\n", pvParameters);
-        }
-        else
-        {
-            PRINTF("Consumer %d is waiting for producer.\r\n", pvParameters);
-        }
+    	if(_isqueueempty(&CircularBuff))
+    	{
+    		taskYIELD();
+    	}
+    	else
+    	{
+    		u8Value = _dequeue(&CircularBuff);
+    		PRINTF("%c", u8Value);
+    		xSemaphoreGive(xSemaphore_console);
+    	}
     }
 }
