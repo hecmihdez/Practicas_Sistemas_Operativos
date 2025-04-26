@@ -2,7 +2,7 @@
 #define __MAIN_H_
 
 #define MAX_TASKS 5
-#define STACK_SIZE 64
+#define STACK_SIZE 128
 #define MAX_HEAPS 4096
 
 #endif

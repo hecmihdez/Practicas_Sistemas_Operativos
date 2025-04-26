@@ -91,8 +91,6 @@ void PendSV_Handler( void )
 {
 	if (tasks[lastTask].status == BLOCK)
 	{
-//		if (!_isqueueempty(&ready)) //If the ready queue is not empty then we look for more tasks.
-//		{
 		asm volatile("MRS     R0, PSP \n");
 		asm volatile("STMDB   R0!, {R4, R5, R6, R7, R8, R9, R10, R11, LR} \n");
 
@@ -113,15 +111,6 @@ void PendSV_Handler( void )
 		asm volatile("LDMIA   R0!, {R4-R11, LR}\n");
 		asm volatile("MSR     PSP, R0\n");
 		asm volatile("BX      LR\n");
-//		}
-//		else //We return to the kernel (main() function) in case we finished all the tasks.
-//		{
-//			taskended = 1;
-//			/* load kernel state */
-//			asm volatile("POP     {R4, R5, R6, R7, R8, R9, R10, R11, IP, LR}  \n");
-//			asm volatile("MSR     PSR_NZCVQ, IP \n");
-//			asm volatile("BX      LR \n");
-//		}
 	}
 	else
 	{
@@ -143,10 +132,10 @@ void task_start()
 	lastTask = _dequeue(&ready);
 	tasks[lastTask].status = RUNNING;
 
-//	if (taskended)
-//	{
-//		return;
-//	}
+	if (taskended)
+	{
+		return;
+	}
 
 	/* Save kernel context */
 	asm volatile ("MRS    IP, PSR \n"); //ip and/or IP - Intra procedure call scratch register. This is a synonym for R12.
