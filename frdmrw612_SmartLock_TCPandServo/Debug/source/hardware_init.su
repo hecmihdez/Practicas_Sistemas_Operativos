@@ -1,0 +1,13 @@
+C:\Users\nxa16972\Documents\MCUXpressoIDE_24.12.148\workspace\frdmrw612_SmartLock_TCPandServo\CMSIS/core_cm33.h:2358:22:__NVIC_EnableIRQ	16	static
+C:\Users\nxa16972\Documents\MCUXpressoIDE_24.12.148\workspace\frdmrw612_SmartLock_TCPandServo\CMSIS/core_cm33.h:2555:22:__NVIC_SetPriority	16	static
+C:\Users\nxa16972\Documents\MCUXpressoIDE_24.12.148\workspace\frdmrw612_SmartLock_TCPandServo\drivers/fsl_common_arm.h:667:24:EnableIRQ	24	static
+C:\Users\nxa16972\Documents\MCUXpressoIDE_24.12.148\workspace\frdmrw612_SmartLock_TCPandServo\drivers/fsl_gpio.h:153:20:GPIO_PinWrite	24	static
+../source/hardware_init.c:28:6:BOARD_InitModuleClock	8	static
+../source/hardware_init.c:37:13:MDIO_Init	16	static
+../source/hardware_init.c:46:17:MDIO_Write	16	static
+../source/hardware_init.c:51:17:MDIO_Read	16	static
+../source/hardware_init.c:57:6:BOARD_InitHardware	16	static
+../source/hardware_init.c:84:6:USB_IRQHandler	8	static
+../source/hardware_init.c:89:6:USB_HostClockInit	8	static
+../source/hardware_init.c:99:6:USB_HostIsrEnable	16	static
+../source/hardware_init.c:112:6:USB_HostTaskFn	16	static

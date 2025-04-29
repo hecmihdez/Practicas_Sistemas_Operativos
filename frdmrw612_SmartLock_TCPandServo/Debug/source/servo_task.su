@@ -1,0 +1,6 @@
+C:\Users\nxa16972\Documents\MCUXpressoIDE_24.12.148\workspace\frdmrw612_SmartLock_TCPandServo\drivers/fsl_ctimer.h:502:20:CTIMER_StartTimer	16	static
+C:\Users\nxa16972\Documents\MCUXpressoIDE_24.12.148\workspace\frdmrw612_SmartLock_TCPandServo\drivers/fsl_ctimer.h:512:20:CTIMER_StopTimer	16	static
+../source/servo_task.c:31:10:CTIMER_GetPwmPeriodValue	24	static
+../source/servo_task.c:42:6:init_pwm	32	static
+../source/servo_task.c:63:6:move_Servo	24	static
+../source/servo_task.c:84:6:ServoTask	24	static
