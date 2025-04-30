@@ -35,7 +35,7 @@
 
 //TODO extern EventGroupHandle_t tcpipEvent;
 //TODO extern EventBits_t tcpipBits;
-//TODO extern QueueHandle_t servo_queue;
+extern QueueHandle_t servo_queue;
 
 #if LWIP_NETCONN
 
@@ -87,7 +87,7 @@ void tcpipserver_task(void *pvParameters)
 				if (result == 0)
 				{
 					PRINTF("Received: %s\n", data);
-					//TODO Send a message using the servo_queue to move the servo
+					xQueueSend(servo_queue, "o" ,0);
 				}
 				netbuf_delete(buf);
 			}

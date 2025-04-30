@@ -103,7 +103,8 @@ void tcpipserver_task(void *pvParameters);
 static phy_handle_t phyHandle;
 static netif_ext_callback_t linkStatusCallbackInfo;
 #define MAX_CMD_LENGTH 2
-//TODO Add the Queue Handler for servo
+
+QueueHandle_t servo_queue;
 /*******************************************************************************
  * Code
  ******************************************************************************/
@@ -447,7 +448,7 @@ int main(void)
     BOARD_InitHardware();
 
 	//RTOS objects needed to be started before the scheduler:
-	//TODO servo_queue = xQueueCreate ...
+	servo_queue = xQueueCreate(MAX_CMD_LENGTH, 1);
 
     USB_HostApplicationInit();
 

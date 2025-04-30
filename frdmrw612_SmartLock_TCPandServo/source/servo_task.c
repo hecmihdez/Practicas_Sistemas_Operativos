@@ -22,7 +22,8 @@
 uint32_t timerClock;
 volatile uint32_t g_pwmPeriod   = 0U;
 volatile uint32_t g_pulsePeriod = 0U;
-//TODO extern the Queue Handler for the servo_queue;
+extern QueueHandle_t servo_queue;
+
 #define CLOSESERVO   0
 #define OPENSERVO    1
 /*******************************************************************************
@@ -70,12 +71,12 @@ void move_Servo(char value)
 	if (value == OPENSERVO)
 	{
 		/* Get the PWM period match value and pulse width match value of 50hz PWM signal with 20% dutycycle */
-		CTIMER_GetPwmPeriodValue(50, (uint8_t)DUTY_CYCLE_20, timerClock);
+		CTIMER_GetPwmPeriodValue(50, (uint8_t)5, timerClock);
 	}
 	else
 	{
 		/* Get the PWM period match value and pulse width match value of 50hz PWM signal with 90% dutycycle */
-		CTIMER_GetPwmPeriodValue(50, (uint8_t)DUTY_CYCLE_90, timerClock);
+		CTIMER_GetPwmPeriodValue(50, (uint8_t)10, timerClock);
 	}
     CTIMER_SetupPwmPeriod(CTIMER, CTIMER_MAT_PWM_PERIOD_CHANNEL, CTIMER_MAT_OUT, g_pwmPeriod, g_pulsePeriod, false);
     CTIMER_StartTimer(CTIMER);
@@ -87,27 +88,30 @@ void ServoTask(void *param)
 
     init_pwm();
 
-    while (1)
-    {
+//    while (1)
+//    {
 		while (1) //TODO wait for new messages on servo_queue using xQueueReceive
 		{
-			switch (cmd[0])
+			if (xQueueReceive(servo_queue, cmd, portMAX_DELAY) == pdTRUE)
 			{
-				case 'o':
-					PRINTF("Open servo\r\n");
-					move_Servo (OPENSERVO);
-					vTaskDelay(1000);
-					PRINTF("Closing servo...\r\n");
-					move_Servo (CLOSESERVO);
-				break;
-				case 'c':
-					PRINTF("Close servo\r\n");
-					move_Servo (CLOSESERVO);
-				break;
-				default:
-				break;
+				switch (cmd[0])
+				{
+					case 'o':
+						PRINTF("Open servo\r\n");
+						move_Servo (OPENSERVO);
+						vTaskDelay(1000);
+						PRINTF("Closing servo...\r\n");
+						move_Servo (CLOSESERVO);
+					break;
+					case 'c':
+						PRINTF("Close servo\r\n");
+						move_Servo (CLOSESERVO);
+					break;
+					default:
+					break;
+				}
 			}
 		}
 
-    }
+//    }
 }
