@@ -26,6 +26,11 @@ extern QueueHandle_t servo_queue;
 
 #define CLOSESERVO   0
 #define OPENSERVO    1
+
+#define APP_BOARD_TEST_LED_PORT BOARD_LED_BLUE_GPIO_PORT
+#define APP_BOARD_TEST_LED_PIN  BOARD_LED_BLUE_GPIO_PIN
+#define APP_BOARD_TEST_LED_GREEN_PIN  12U
+#define APP_BOARD_TEST_LED_RED_PIN  1U
 /*******************************************************************************
  * Code
  ******************************************************************************/
@@ -98,10 +103,16 @@ void ServoTask(void *param)
 				{
 					case 'o':
 						PRINTF("Open servo\r\n");
+//						GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, 1U);
+//						GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, 0U);
+//						GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, 1U);
 						move_Servo (OPENSERVO);
 						vTaskDelay(1000);
 						PRINTF("Closing servo...\r\n");
 						move_Servo (CLOSESERVO);
+//						GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, 1U);
+//						GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, 1U);
+//						GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, 0U);
 					break;
 					case 'c':
 						PRINTF("Close servo\r\n");

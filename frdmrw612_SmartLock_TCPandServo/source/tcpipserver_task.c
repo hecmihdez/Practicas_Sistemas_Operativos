@@ -33,8 +33,8 @@
 #include "lwip/opt.h"
 #include "event_groups.h"
 
-//TODO extern EventGroupHandle_t tcpipEvent;
-//TODO extern EventBits_t tcpipBits;
+extern EventGroupHandle_t tcpipEvent;
+extern EventBits_t tcpipBits;
 extern QueueHandle_t servo_queue;
 
 #if LWIP_NETCONN
@@ -54,6 +54,13 @@ void tcpipserver_task(void *pvParameters)
 	//TODO Wait until TCPIP stack is up and running
 //	  tcpipBits = xEventGroupWaitBits( ...
 //
+
+	tcpipBits = xEventGroupWaitBits(
+					tcpipEvent,    /* The event group being tested. */
+					0b1,           /* The bit within the event group to wait for: bit 0. */
+					pdFALSE,       /* BIT 0 should NOT be cleared before returning. */
+					pdFALSE,       /* Don't wait for both bits, either bit will do. */
+					portMAX_DELAY);/* Wait a maximum of 100ms for either bit to be set. */
 
 	vTaskDelay(1000);
 	PRINTF("TCPIP Server started/n/r");

@@ -12,11 +12,17 @@
 #include "host_keyboard_mouse.h"
 #include "host_keyboard.h"
 #include "app.h"
+#include "stdlib.h"
 
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
 #define KEYBOARD_USAGE_ID_NUMBER (57U)
+
+#define SWAP4BYTE_CONST(n) \
+    ((((n)&0x000000FFU) << 24U) | (((n)&0x0000FF00U) << 8U) | (((n)&0x00FF0000U) >> 8U) | (((n)&0xFF000000U) >> 24U))
+
+#define BUFFER_SIZE   (10U)
 
 /*******************************************************************************
  * Prototypes
@@ -52,6 +58,11 @@ static void USB_HostHidInCallback(void *param, uint8_t *data, uint32_t dataLengt
 /*******************************************************************************
  * Variables
  ******************************************************************************/
+
+uint8_t RFID_Tag[BUFFER_SIZE] = {0U};
+uint8_t Index = 0U;
+
+extern QueueHandle_t RFID_queue;
 
 USB_DMA_NONINIT_DATA_ALIGN(USB_DATA_ALIGN_SIZE)
 static uint8_t s_KeyboardBuffer[HID_BUFFER_SIZE]; /*!< use to receive report descriptor and data */
@@ -121,6 +132,35 @@ static const uint8_t g_HostKeyboardTable[KEYBOARD_USAGE_ID_NUMBER][2] = {
 /*******************************************************************************
  * Code
  ******************************************************************************/
+static void USB_SaveID(char key)
+{
+	int i = 0;
+	int UID_Dec = 0;
+	int UID_Swap = 0;
+	uint8_t UID_string[BUFFER_SIZE] = {0U};
+
+	if(key == '\n')
+	{
+		UID_Dec = atoi(RFID_Tag);
+		UID_Swap = SWAP4BYTE_CONST(UID_Dec);
+		(void)itoa(UID_Swap, UID_string, 16);
+
+		xQueueSend(RFID_queue, UID_string ,0);
+		Index = 0U;
+
+		for(i = 0; i < BUFFER_SIZE; i++)
+		{
+			usb_echo("%c", UID_string[i]);
+			RFID_Tag[i] = 0U;
+		}
+	}
+	else if(Index < BUFFER_SIZE)
+	{
+		RFID_Tag[Index] = key;
+		Index++;
+	}
+}
+
 /*Host hid example doesn't support HID report descriptor analysis, this example assume that the received data are sent
  * by specific order. */
 static void USB_HostKeyboardPrintKey(uint8_t key, uint8_t shift)
@@ -136,6 +176,8 @@ static void USB_HostKeyboardPrintKey(uint8_t key, uint8_t shift)
     else if (key <= 56)
     {
         usb_echo("%c", g_HostKeyboardTable[key][shift]);
+
+        USB_SaveID((char)g_HostKeyboardTable[key][shift]);
     }
     else
     {

@@ -25,6 +25,7 @@ processor_version: 0.15.4
 
 #include "fsl_common.h"
 #include "fsl_io_mux.h"
+#include "fsl_gpio.h"
 #include "pin_mux.h"
 
 /* FUNCTION ************************************************************************************************************
@@ -58,6 +59,18 @@ BOARD_InitPins:
 /* Function assigned for the Cortex-M33 */
 void BOARD_InitPins(void)
 {
+	/* Enables the clock for the GPIO0 module */
+//	GPIO_PortInit(GPIO, 0);
+//
+//	gpio_pin_config_t gpio0_pinD12_config = {
+//		.pinDirection = kGPIO_DigitalOutput,
+//		.outputLogic = 0U
+//	};
+//	/* Initialize GPIO functionality on pin PIO0_0 (pin D12)  */
+//	GPIO_PinInit(GPIO, 0U, 0U, &gpio0_pinD12_config);
+//	GPIO_PinInit(GPIO, 0U, 12U, &gpio0_pinD12_config);
+//	GPIO_PinInit(GPIO, 0U, 1U, &gpio0_pinD12_config);
+
     /* Initialize FC3_USART_DATA functionality on pin GPIO_24 (pin F3) */
     IO_MUX_SetPinMux(IO_MUX_FC3_USART_DATA);
 
@@ -70,6 +83,11 @@ void BOARD_InitPins(void)
 
     /* Initialize CT0_MAT0_OUT functionality on pin GPIO_0 (pin M1) */
     IO_MUX_SetPinMux(IO_MUX_CT0_MAT0_OUT);
+
+//    /* Initialize GPIO0 functionality on pin GPIO_0 (pin D12) */
+//    IO_MUX_SetPinMux(IO_MUX_GPIO0);
+//    IO_MUX_SetPinMux(IO_MUX_GPIO1);
+//    IO_MUX_SetPinMux(IO_MUX_GPIO12);
 }
 /***********************************************************************************************************************
  * EOF

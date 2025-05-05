@@ -42,6 +42,7 @@
 #endif
 
 #include "servo_task.h"
+#include "database_task.h"
 /*******************************************************************************
  * Definitions
  ******************************************************************************/
@@ -91,6 +92,11 @@
 #endif // #ifndef EXAMPLE_PHY_INT_PIN
 #endif // #if ETH_LINK_POLLING_INTERVAL_MS == 0
 
+#define APP_BOARD_TEST_LED_PORT BOARD_LED_BLUE_GPIO_PORT
+#define APP_BOARD_TEST_LED_PIN  BOARD_LED_BLUE_GPIO_PIN
+#define APP_BOARD_TEST_LED_GREEN_PIN  12U
+#define APP_BOARD_TEST_LED_RED_PIN  1U
+
 /*******************************************************************************
  * Prototypes
  ******************************************************************************/
@@ -104,7 +110,11 @@ static phy_handle_t phyHandle;
 static netif_ext_callback_t linkStatusCallbackInfo;
 #define MAX_CMD_LENGTH 2
 
-QueueHandle_t servo_queue;
+QueueHandle_t servo_queue = NULL;
+QueueHandle_t RFID_queue = NULL;
+
+EventGroupHandle_t tcpipEvent;
+EventBits_t tcpipBits;
 /*******************************************************************************
  * Code
  ******************************************************************************/
@@ -290,6 +300,10 @@ static void print_dhcp_state(void *arg)
                 PRINTF("\r\n IPv4 Address     : %s\r\n", ipaddr_ntoa(&netif->ip_addr));
                 PRINTF(" IPv4 Subnet mask : %s\r\n", ipaddr_ntoa(&netif->netmask));
                 PRINTF(" IPv4 Gateway     : %s\r\n\r\n", ipaddr_ntoa(&netif->gw));
+
+                xEventGroupSetBits(tcpipEvent, 0b1);
+
+                xEventGroupClearBits(tcpipEvent, 0b1);
             }
         }
 
@@ -445,10 +459,27 @@ static void USB_HostApplicationKeyboardTask(void *param)
 
 int main(void)
 {
+
+    /* Define the init structure for the output LED pin*/
+    gpio_pin_config_t led_config = {
+        kGPIO_DigitalOutput,
+        0,
+    };
+
     BOARD_InitHardware();
 
+//    GPIO_PortInit(GPIO, APP_BOARD_TEST_LED_PORT);
+//    GPIO_PinInit(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, &led_config);
+//    GPIO_PinInit(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, &led_config);
+//    GPIO_PinInit(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, &led_config);
+//    GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, 1);
+//    GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, 1);
+//    GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, 1);
+
 	//RTOS objects needed to be started before the scheduler:
+    tcpipEvent = xEventGroupCreate();
 	servo_queue = xQueueCreate(MAX_CMD_LENGTH, 1);
+	RFID_queue = xQueueCreate(1, 10);
 
     USB_HostApplicationInit();
 
@@ -469,6 +500,11 @@ int main(void)
     }
 
     if (xTaskCreate(tcpipserver_task, "tcpipserver_task", 2000L / sizeof(portSTACK_TYPE), NULL, 3, NULL) != pdPASS)
+    {
+        PRINTF("create host task error\r\n");
+    }
+
+    if (xTaskCreate(database_task, "database_task", 2000L / sizeof(portSTACK_TYPE), NULL, 3, NULL) != pdPASS)
     {
         PRINTF("create host task error\r\n");
     }
