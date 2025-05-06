@@ -364,9 +364,24 @@ void BOARD_InitHardware(void);
 extern usb_host_keyboard_instance_t g_HostHidKeyboard;
 usb_host_handle g_HostHandle;
 
+volatile bool g_InputSignal = false;
+
 /*******************************************************************************
  * Code
  ******************************************************************************/
+void APP_GPIO_INTA_IRQHandler(void)
+{
+    /* clear the interrupt status */
+    GPIO_PinClearInterruptFlag(GPIO, 0, 20, 0);
+    /* Change state of switch. */
+    g_InputSignal = true;
+	GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, 1U);
+	GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, 1U);
+	GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, 0U);
+    SDK_ISR_EXIT_BARRIER;
+}
+
+
 
 /*!
  * @brief USB isr function.
@@ -463,18 +478,31 @@ int main(void)
     /* Define the init structure for the output LED pin*/
     gpio_pin_config_t led_config = {
         kGPIO_DigitalOutput,
-        0,
+        1,
     };
+
+    /* Define the init structure for the input switch pin */
+    gpio_pin_config_t sw_config    = {kGPIO_DigitalInput, 0};
+    gpio_interrupt_config_t config = {kGPIO_PinIntEnableEdge, kGPIO_PinIntEnableLowOrFall};
 
     BOARD_InitHardware();
 
 //    GPIO_PortInit(GPIO, APP_BOARD_TEST_LED_PORT);
-//    GPIO_PinInit(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, &led_config);
-//    GPIO_PinInit(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, &led_config);
-//    GPIO_PinInit(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, &led_config);
-//    GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, 1);
-//    GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, 1);
-//    GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, 1);
+    GPIO_PinInit(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, &led_config);
+    GPIO_PinInit(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, &led_config);
+    GPIO_PinInit(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, &led_config);
+    GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, 1);
+    GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, 1);
+    GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, 1);
+
+    /* Init input switch GPIO. */
+    EnableIRQ(APP_SW_IRQ);
+//    GPIO_PortInit(GPIO, 0);
+    GPIO_PinInit(GPIO, 0, 20, &sw_config);
+
+    /* Enable GPIO pin interrupt */
+    GPIO_SetPinInterruptConfig(GPIO, 0, 20, &config);
+    GPIO_PinEnableInterrupt(GPIO, 0, 20, 0);
 
 	//RTOS objects needed to be started before the scheduler:
     tcpipEvent = xEventGroupCreate();

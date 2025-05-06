@@ -150,7 +150,7 @@ static void USB_SaveID(char key)
 
 		for(i = 0; i < BUFFER_SIZE; i++)
 		{
-			usb_echo("%c", UID_string[i]);
+//			usb_echo("%c", UID_string[i]);
 			RFID_Tag[i] = 0U;
 		}
 	}
@@ -175,7 +175,7 @@ static void USB_HostKeyboardPrintKey(uint8_t key, uint8_t shift)
     }
     else if (key <= 56)
     {
-        usb_echo("%c", g_HostKeyboardTable[key][shift]);
+//        usb_echo("%c", g_HostKeyboardTable[key][shift]);
 
         USB_SaveID((char)g_HostKeyboardTable[key][shift]);
     }

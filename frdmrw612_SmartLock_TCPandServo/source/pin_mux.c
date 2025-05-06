@@ -60,16 +60,30 @@ BOARD_InitPins:
 void BOARD_InitPins(void)
 {
 	/* Enables the clock for the GPIO0 module */
-//	GPIO_PortInit(GPIO, 0);
+	GPIO_PortInit(GPIO, 0);
 //
-//	gpio_pin_config_t gpio0_pinD12_config = {
-//		.pinDirection = kGPIO_DigitalOutput,
+	gpio_pin_config_t gpio0_pinD12_config = {
+		.pinDirection = kGPIO_DigitalOutput,
+		.outputLogic = 1U
+	};
+
+//	gpio_pin_config_t gpio0_pinD7_config = {
+//		.pinDirection = kGPIO_DigitalInput,
 //		.outputLogic = 0U
 //	};
+//
+//	gpio_interrupt_config_t gpio0_pinD7_int_cfg = {
+//		.mode = ,
+//		.polarity =
+//	};
+//
+//	GPIO_SetPinInterruptConfig(GPIO, 0U, 20U, );
+
 //	/* Initialize GPIO functionality on pin PIO0_0 (pin D12)  */
-//	GPIO_PinInit(GPIO, 0U, 0U, &gpio0_pinD12_config);
-//	GPIO_PinInit(GPIO, 0U, 12U, &gpio0_pinD12_config);
-//	GPIO_PinInit(GPIO, 0U, 1U, &gpio0_pinD12_config);
+	GPIO_PinInit(GPIO, 0U, 0U, &gpio0_pinD12_config);
+	GPIO_PinInit(GPIO, 0U, 12U, &gpio0_pinD12_config);
+	GPIO_PinInit(GPIO, 0U, 1U, &gpio0_pinD12_config);
+//	GPIO_PinInit(GPIO, 0U, 20U, &gpio0_pinD7_config);
 
     /* Initialize FC3_USART_DATA functionality on pin GPIO_24 (pin F3) */
     IO_MUX_SetPinMux(IO_MUX_FC3_USART_DATA);
@@ -80,14 +94,20 @@ void BOARD_InitPins(void)
     IO_MUX_SetPinMux(IO_MUX_ENET_MDIO);
     IO_MUX_SetPinMux(IO_MUX_GPIO21);
     IO_MUX_SetPinMux(IO_MUX_GPIO55);
+    IO_MUX_SetPinMux(IO_MUX_GPIO20);
 
     /* Initialize CT0_MAT0_OUT functionality on pin GPIO_0 (pin M1) */
     IO_MUX_SetPinMux(IO_MUX_CT0_MAT0_OUT);
 
+//    /* Initialize SCT_OUT_0 functionality on pin GPIO_3 (pin L4) */
+//    IO_MUX_SetPinMux(IO_MUX_SCT_OUT_0);
+//    /* Initialize SCT_OUT_1 functionality on pin GPIO_4 (pin N3) */
+//    IO_MUX_SetPinMux(IO_MUX_SCT_OUT_1);
+
 //    /* Initialize GPIO0 functionality on pin GPIO_0 (pin D12) */
 //    IO_MUX_SetPinMux(IO_MUX_GPIO0);
-//    IO_MUX_SetPinMux(IO_MUX_GPIO1);
-//    IO_MUX_SetPinMux(IO_MUX_GPIO12);
+    IO_MUX_SetPinMux(IO_MUX_GPIO1);
+    IO_MUX_SetPinMux(IO_MUX_GPIO12);
 }
 /***********************************************************************************************************************
  * EOF

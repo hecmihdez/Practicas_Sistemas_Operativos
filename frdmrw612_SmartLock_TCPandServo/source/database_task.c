@@ -32,6 +32,7 @@
 
 #include "lwip/opt.h"
 #include "event_groups.h"
+#include "fsl_gpio.h"
 
 #define BUFFER_SIZE   (8U)
 
@@ -40,12 +41,21 @@ extern EventBits_t tcpipBits;
 extern QueueHandle_t RFID_queue;
 extern QueueHandle_t servo_queue;
 
+extern bool g_InputSignal;
+
 char UID_string[BUFFER_SIZE] = {0U};
+char UID_strcmp[15] = "tag_id: ";
 
 #if LWIP_NETCONN
 
 #include "lwip/sys.h"
 #include "lwip/api.h"
+
+
+#define APP_BOARD_TEST_LED_PORT 0U
+#define APP_BOARD_TEST_LED_PIN  0U
+#define APP_BOARD_TEST_LED_GREEN_PIN  12U
+#define APP_BOARD_TEST_LED_RED_PIN  1U
 /*-----------------------------------------------------------------------------------*/
 
 typedef enum
@@ -89,16 +99,23 @@ static u8_t database_consult(u8_t ConsultType)
 		{
 			do {
 				netbuf_data(buf, &data, &len);
-				PRINTF("Received: %s\n", data);
+//				PRINTF("Received: %s\n", data);
 			} while (netbuf_next(buf) >= 0);
 			//PRINTF("Received: %s\n", data);
-			charptr = strstr((const char *)data, "tag_id: 41e527a"); //tag_id: 4474c7a1e4e81
+			strcat(UID_strcmp, UID_string);
+			charptr = strstr((const char *)data, UID_strcmp); //tag_id: 4474c7a1e4e81
+//			charptr = strstr((const char *)data, "tag_id: 41e527a"); //tag_id: 4474c7a1e4e81
 			if (charptr)
 			{
-				PRINTF("User exists\n");
+				//PRINTF("User exists\n");
 				FoundState = 1U;
 			}
 			netbuf_delete(buf);
+
+			for(u8_t u8i = 8U; u8i < 15; u8i++)
+			{
+				UID_strcmp[u8i] = 0U;
+			}
 		}
 	}
 	else if(ConsultType == Registration)
@@ -111,13 +128,13 @@ static u8_t database_consult(u8_t ConsultType)
 		{
 			do {
 				netbuf_data(buf, &data, &len);
-				PRINTF("Received: %s\n", data);
+//				PRINTF("Received: %s\n", data);
 			} while (netbuf_next(buf) >= 0);
 			//PRINTF("Received: %s\n", data);
 			result = strncmp("HTTP/1.1 200 OK", data, 15);
 			if (result == 0)
 			{
-				PRINTF("User Registered\n");
+				PRINTF("Usuario registrado\r\n");
 			}
 			netbuf_delete(buf);
 		}
@@ -149,28 +166,40 @@ void database_task(void *pvParameters)
 		if (xQueueReceive(RFID_queue, UID_string, portMAX_DELAY) == pdTRUE)
 		{
 
-			/*Registro de nuevo RFID Tag*/
-	//		Authenticator = database_consult(Authentication);
-	//
-	//		if(Authenticator == 0U)
-	//		{
-	//			(void)database_consult(Registration);
-	//		}
-	//		else
-	//		{
-	//			/*Usuario ya existente*/
-	//		}
-
-			/*Accionar SmartLock*/
-			Authenticator = database_consult(Authentication);
-
-			if(Authenticator)
+			if(g_InputSignal == true)
 			{
-				xQueueSend(servo_queue, "o" ,0);
+				/*Registro de nuevo RFID Tag*/
+				Authenticator = database_consult(Authentication);
+
+				if(Authenticator == 0U)
+				{
+					(void)database_consult(Registration);
+
+//					PRINTF("Usuario nuevo registrado\n");
+				}
+				else
+				{
+					PRINTF("Usuario ya existente\r\n");
+				}
+
+				g_InputSignal = false;
+				GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, 1U);
+				GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, 1U);
+				GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, 1U);
 			}
 			else
 			{
-				/*Usuario no registrado*/
+				/*Accionar SmartLock*/
+				Authenticator = database_consult(Authentication);
+
+				if(Authenticator)
+				{
+					xQueueSend(servo_queue, "o" ,0);
+				}
+				else
+				{
+					PRINTF("Usuario no registrado\r\n");
+				}
 			}
 
 

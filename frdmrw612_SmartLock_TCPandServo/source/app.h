@@ -115,4 +115,11 @@ extern phy_ksz8081_resource_t g_phy_resource;
 #define CTIMER_MAT_OUT  kCTIMER_Match_0 /* Match output 0 */
 #define CTIMER_CLK_FREQ CLOCK_GetCTimerClkFreq(0)
 
+#define APP_SW_IRQ               GPIO_INTA_IRQn
+#define APP_GPIO_INTA_IRQHandler GPIO_INTA_DriverIRQHandler
+
+#define SCTIMER_CLK_FREQ        CLOCK_GetCoreSysClkFreq()
+#define DEMO_FIRST_SCTIMER_OUT  kSCTIMER_Out_0
+#define DEMO_SECOND_SCTIMER_OUT kSCTIMER_Out_1
+
 #endif /* __APP_H__ */
