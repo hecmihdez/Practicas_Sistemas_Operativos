@@ -114,7 +114,9 @@ QueueHandle_t servo_queue = NULL;
 QueueHandle_t RFID_queue = NULL;
 
 EventGroupHandle_t tcpipEvent;
+EventGroupHandle_t regEvent;
 EventBits_t tcpipBits;
+EventBits_t regBits;
 /*******************************************************************************
  * Code
  ******************************************************************************/
@@ -374,10 +376,13 @@ void APP_GPIO_INTA_IRQHandler(void)
     /* clear the interrupt status */
     GPIO_PinClearInterruptFlag(GPIO, 0, 20, 0);
     /* Change state of switch. */
-    g_InputSignal = true;
+
 	GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, 1U);
 	GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, 1U);
 	GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, 0U);
+
+	xEventGroupSetBits(regEvent, 0b1);
+
     SDK_ISR_EXIT_BARRIER;
 }
 
@@ -487,7 +492,6 @@ int main(void)
 
     BOARD_InitHardware();
 
-//    GPIO_PortInit(GPIO, APP_BOARD_TEST_LED_PORT);
     GPIO_PinInit(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, &led_config);
     GPIO_PinInit(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, &led_config);
     GPIO_PinInit(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, &led_config);
@@ -497,7 +501,6 @@ int main(void)
 
     /* Init input switch GPIO. */
     EnableIRQ(APP_SW_IRQ);
-//    GPIO_PortInit(GPIO, 0);
     GPIO_PinInit(GPIO, 0, 20, &sw_config);
 
     /* Enable GPIO pin interrupt */
@@ -506,6 +509,7 @@ int main(void)
 
 	//RTOS objects needed to be started before the scheduler:
     tcpipEvent = xEventGroupCreate();
+    regEvent = xEventGroupCreate();
 	servo_queue = xQueueCreate(MAX_CMD_LENGTH, 1);
 	RFID_queue = xQueueCreate(1, 10);
 

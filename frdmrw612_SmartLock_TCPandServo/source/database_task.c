@@ -37,7 +37,9 @@
 #define BUFFER_SIZE   (8U)
 
 extern EventGroupHandle_t tcpipEvent;
+extern EventGroupHandle_t regEvent;
 extern EventBits_t tcpipBits;
+extern EventBits_t regBits;
 extern QueueHandle_t RFID_queue;
 extern QueueHandle_t servo_queue;
 
@@ -91,23 +93,17 @@ static u8_t database_consult(u8_t ConsultType)
 
 	if(ConsultType == Authentication)
 	{
-		//PRINTF("Authenticate user\n\r");
-		//authenticate user
 		sprintf(HTTPrequest, "GET /nfcauth.php?tagid=%s HTTP/1.0\r\n\r\n", UID_string);
 		err = netconn_write(conn, HTTPrequest, strlen(HTTPrequest), NETCONN_COPY);
 		while ((err = netconn_recv(conn, &buf)) == ERR_OK)
 		{
 			do {
 				netbuf_data(buf, &data, &len);
-//				PRINTF("Received: %s\n", data);
 			} while (netbuf_next(buf) >= 0);
-			//PRINTF("Received: %s\n", data);
 			strcat(UID_strcmp, UID_string);
-			charptr = strstr((const char *)data, UID_strcmp); //tag_id: 4474c7a1e4e81
-//			charptr = strstr((const char *)data, "tag_id: 41e527a"); //tag_id: 4474c7a1e4e81
+			charptr = strstr((const char *)data, UID_strcmp);
 			if (charptr)
 			{
-				//PRINTF("User exists\n");
 				FoundState = 1U;
 			}
 			netbuf_delete(buf);
@@ -128,9 +124,7 @@ static u8_t database_consult(u8_t ConsultType)
 		{
 			do {
 				netbuf_data(buf, &data, &len);
-//				PRINTF("Received: %s\n", data);
 			} while (netbuf_next(buf) >= 0);
-			//PRINTF("Received: %s\n", data);
 			result = strncmp("HTTP/1.1 200 OK", data, 15);
 			if (result == 0)
 			{
@@ -166,7 +160,15 @@ void database_task(void *pvParameters)
 		if (xQueueReceive(RFID_queue, UID_string, portMAX_DELAY) == pdTRUE)
 		{
 
-			if(g_InputSignal == true)
+			//Wait until TCPIP stack is up and running
+			regBits = xEventGroupWaitBits(
+							regEvent,    /* The event group being tested. */
+							0b1,           /* The bit within the event group to wait for: bit 0. */
+							pdFALSE,       /* BIT 0 should NOT be cleared before returning. */
+							pdFALSE,       /* Don't wait for both bits, either bit will do. */
+							0);/* Wait a minimun for either bit to be set. */
+
+			if((regBits & 0b1) == 0b1)
 			{
 				/*Registro de nuevo RFID Tag*/
 				Authenticator = database_consult(Authentication);
@@ -174,15 +176,14 @@ void database_task(void *pvParameters)
 				if(Authenticator == 0U)
 				{
 					(void)database_consult(Registration);
-
-//					PRINTF("Usuario nuevo registrado\n");
 				}
 				else
 				{
 					PRINTF("Usuario ya existente\r\n");
 				}
 
-				g_InputSignal = false;
+				regBits = 0U;
+				xEventGroupClearBits(regEvent, 0b1);
 				GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_PIN, 1U);
 				GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_GREEN_PIN, 1U);
 				GPIO_PinWrite(GPIO, APP_BOARD_TEST_LED_PORT, APP_BOARD_TEST_LED_RED_PIN, 1U);
@@ -201,38 +202,7 @@ void database_task(void *pvParameters)
 					PRINTF("Usuario no registrado\r\n");
 				}
 			}
-
-
-		//Test from the web browser
-		//http://10.215.170.119:1031/datalog.php?frdm_id=FRMD-Profe&sensor=acc&data=123123
-		//http://10.215.170.119:1031/nfcauth.php?tagid=4474c7a1e4e81
-		//http://10.215.170.119:1031/nfcreg.php?tagid=4474c7a1e4e81&name=Luis&lastname=Garabito&access=Mortal
-		//Test from the web browser
-
-		//sprintf(HTTPrequest, "GET /nfcauth.php?tagid=%s HTTP/1.0\r\n\r\n", TagUIDstr);
-		//netconn_write(conn, HTTPrequest,strlen(HTTPrequest),NETCONN_COPY);
-
-		//PRINTF("Sensor data Logged\n\r");
-		//datalog sensor
-	//	sprintf(HTTPrequest, "GET /datalog.php?frdm_id=Iteso&sensor=LightSensor&data=%d HTTP/1.0\r\n\r\n", 508353);
-	//	err = netconn_write(conn, HTTPrequest, strlen(HTTPrequest), NETCONN_COPY);
-	//	while ((err = netconn_recv(conn, &buf)) == ERR_OK)
-	//	{
-	//		do {
-	//			netbuf_data(buf, &data, &len);
-	//			PRINTF("Received: %s\n", data);
-	//		} while (netbuf_next(buf) >= 0);
-	//		//PRINTF("Received: %s\n", data);
-	//		result = strncmp("HTTP/1.1 200 OK", data, 15);
-	//		if (result == 0)
-	//		{
-	//			PRINTF("Data logged\n");
-	//		}
-	//		netbuf_delete(buf);
-	//	}
 		}
-
-//		vTaskSuspend(NULL);
 	}
 
 }

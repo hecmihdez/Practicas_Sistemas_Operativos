@@ -150,7 +150,6 @@ static void USB_SaveID(char key)
 
 		for(i = 0; i < BUFFER_SIZE; i++)
 		{
-//			usb_echo("%c", UID_string[i]);
 			RFID_Tag[i] = 0U;
 		}
 	}
